@@ -24,6 +24,7 @@
 | `DEVELOPMENT_STATUS.md` | 开发状态：已完成项、误报修复记录、未实现清单、续接指引 |
 | `docs/ACCEPTANCE_DIAGNOSTIC_REPORT_2026-09-06.md` | 修复前的全面验收与 31 组问题诊断（历史快照） |
 | `docs/FIX_REPORT_2026-09-06.md` | 31 组问题的逐项修复、回归证据和当前限制 |
+| `docs/PERFORMANCE_OPTIMIZATION_2026-09-06.md` | 正式 Web 报告耗时基准、并行优化和前后质量对照 |
 | `.env.example` | 全部配置项及注释（配置的唯一权威来源） |
 | `A股港股基本面排雷Agent开发方案.md` | 原始开发方案（设计基线） |
 
@@ -102,6 +103,7 @@ python scripts/phase0_validate.py          # 默认 600519 + 00700
 | `LLM_API_KEY` | 空 | 模型密钥。不配置则 AI 解读/核验整体跳过并标注 |
 | `LLM_BASE_URL` / `LLM_MODEL` | DeepSeek | 任意 OpenAI 兼容服务商均可 |
 | `LLM_BUDGET_CNY` | 3.0 | 单次扫描模型预算上限（元），超出自动降级 |
+| `LLM_PARALLEL_CALLS` | 2 | 独立模型批次并发数；不改变输入与校验，供应商限制并发时可设为 1 |
 | `FISCAL_YEARS_BACK` | 5 | 回看的完整财年数 |
 | `ANNOUNCEMENT_MONTHS` | 12 | 公告检索区间（月） |
 | `MAX_PDF_DOWNLOADS` | 25 | 单次扫描原文下载份数上限 |
@@ -131,6 +133,7 @@ python scripts/phase0_validate.py          # 默认 600519 + 00700
 - **程序负责**：获取与追踪来源、计算指标、执行规则、校验证据引用、管理任务状态、渲染安全 HTML
 - **AI 负责**（可插拔）：理解附注与公告、解释已算出的异常、识别缓解因素、独立核验结论与证据的一致性
 - 模型不参与任何数值计算；未配置密钥时相关步骤整体跳过并标注，绝无模拟结论
+- 相互独立的模型批次默认最多 2 路并行；输入、模型参数、预算、校验和合并顺序保持不变
 
 每条风险按统一结构呈现：
 

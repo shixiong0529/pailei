@@ -11,6 +11,7 @@ import math
 import socket
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -37,7 +38,7 @@ from app.engine.metrics import compute_metrics
 from app.engine.rules.base import RuleContext, EvidenceStore
 from app.engine.runner import build_registry, run_rules, attach_evidence, ai_verify
 from app.engine.pipeline import ScanPipeline
-from app.llm.adapter import LLMAdapter, LLMResult
+from app.llm.adapter import BudgetExceeded, LLMAdapter, LLMResult
 from app.report.render import _env, render_inline, risk_signal_score
 
 spec = importlib.util.spec_from_file_location("original_tests", ROOT / "tests/run_tests.py")
@@ -245,10 +246,20 @@ class AuditChecks(unittest.TestCase):
         def chat(*a,**kw):
             llm.spent_cny+=.1
             return LLMResult(True,data=[{"rule_id":"one"}],cost_cny=.1)
-        with patch.object(llm,"chat_json",side_effect=chat):
+        with patch.object(llm,"chat_json",side_effect=chat) as call:
             r=llm._run_batched([[1],[2]],lambda b:("s","u"),"test")
         self.assertTrue(r.ok)
+        self.assertEqual(call.call_count,1,"批次并发前必须先按原顺序规划预算")
         self.assertTrue(llm.failures or r.error or r.skipped_reason,"预算导致第2批取消但无任何失败说明")
+        guard=LLMAdapter(LLMConfig(api_key="fixture",budget_cny=.3))
+        barrier=threading.Barrier(2)
+        def reserve():
+            barrier.wait(timeout=1)
+            try:guard._reserve_budget(.2);return True
+            except BudgetExceeded:return False
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            accepted=list(pool.map(lambda _i:reserve(),range(2)))
+        self.assertEqual(sum(accepted),1,"并发预算预留允许两个请求同时越过上限")
 
     def test_30_network_disable_is_honored(self):
         c=HttpClient();c._client.close()
@@ -397,10 +408,22 @@ class AuditChecks(unittest.TestCase):
         with self.assertRaises(FetchError):assert_safe_url("http://127.0.0.1/")
 
     def test_46_partial_llm_batch_preserves_good_results(self):
-        llm=LLMAdapter(LLMConfig(api_key="fixture",budget_cny=3.))
-        with patch.object(llm,"chat_json",side_effect=[LLMResult(True,data=[{"rule_id":"one"}]),LLMResult(False,error="truncated")]):
-            result=llm._run_batched([[1],[2]],lambda x:("s","u"),"test")
-        self.assertTrue(result.ok);self.assertEqual(len(result.data),1);self.assertTrue(llm.failures)
+        llm=LLMAdapter(LLMConfig(api_key="fixture",budget_cny=3.,parallel_calls=2))
+        barrier=threading.Barrier(2);lock=threading.Lock();active=peak=0
+        def chat(_system,user,**_kwargs):
+            nonlocal active,peak
+            with lock:active+=1;peak=max(peak,active)
+            try:
+                barrier.wait(timeout=1)
+                time.sleep(.01)
+                return (LLMResult(True,data=[{"rule_id":"one"}]) if user=="[1]"
+                        else LLMResult(False,error="truncated"))
+            finally:
+                with lock:active-=1
+        with patch.object(llm,"chat_json",side_effect=chat):
+            result=llm._run_batched([[1],[2]],lambda x:("s",str(x)),"test")
+        self.assertEqual(peak,2,"独立批次没有并发执行")
+        self.assertTrue(result.ok);self.assertEqual(result.data,[{"rule_id":"one"}]);self.assertTrue(llm.failures)
 
     def test_47_unavailable_llm_never_calls_network(self):
         llm=LLMAdapter(LLMConfig(api_key=""))

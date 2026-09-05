@@ -456,7 +456,9 @@ def save_fetch_logs(task_id: str, records: Iterable[Any]) -> None:
 def save_llm_usage(
     task_id: str, step: str, model: str, tin: int, tout: int, cost: float
 ) -> None:
-    with tx() as conn:
+    # 同一任务的独立模型批次可以并发完成；串行化极短的 SQLite 写入，
+    # 避免多个响应在同一毫秒落库时互相争用写锁。
+    with _lock, tx() as conn:
         conn.execute(
             "INSERT INTO llm_usage (task_id, step, model, input_tokens, output_tokens, cost_cny, created_at)"
             " VALUES (?,?,?,?,?,?,?)",

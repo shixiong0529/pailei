@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -58,6 +60,8 @@ class LLMAdapter:
         self.calls = 0
         self.failures: list[str] = []
         self.deadline: float | None = None
+        self._reserved_cny = 0.0
+        self._state_lock = threading.Lock()
 
     # ------------------------------------------------------------ 状态
 
@@ -78,12 +82,35 @@ class LLMAdapter:
         return ""
 
     def _check_budget(self, estimated: float) -> None:
-        if self.config.budget_cny <= 0:
-            return
-        if self.spent_cny + estimated > self.config.budget_cny:
-            raise BudgetExceeded(
-                f"已达到本次扫描的模型预算上限 {self.config.budget_cny:.2f} 元"
-            )
+        with self._state_lock:
+            if self.config.budget_cny <= 0:
+                return
+            if self.spent_cny + self._reserved_cny + estimated > self.config.budget_cny:
+                raise BudgetExceeded(
+                    f"已达到本次扫描的模型预算上限 {self.config.budget_cny:.2f} 元"
+                )
+
+    def _reserve_budget(self, estimated: float) -> None:
+        """为一次并发调用原子预留预算，避免多个批次同时越过预算检查。"""
+        with self._state_lock:
+            if self.config.budget_cny > 0 and (
+                self.spent_cny + self._reserved_cny + estimated > self.config.budget_cny
+            ):
+                raise BudgetExceeded(
+                    f"已达到本次扫描的模型预算上限 {self.config.budget_cny:.2f} 元"
+                )
+            self._reserved_cny += estimated
+
+    def _settle_budget(self, estimated: float, actual: float = 0.0, *, count_call: bool = False) -> None:
+        with self._state_lock:
+            self._reserved_cny = max(0.0, self._reserved_cny - estimated)
+            self.spent_cny += actual
+            if count_call:
+                self.calls += 1
+
+    def _add_failure(self, message: str) -> None:
+        with self._state_lock:
+            self.failures.append(message)
 
     def _estimate(self, system: str, user: str, max_tokens: int | None = None) -> float:
         # 输入 UTF-8 字节数作为 token 上界，另预留消息协议开销。
@@ -105,14 +132,22 @@ class LLMAdapter:
             return LLMResult(ok=False, skipped_reason=self.unavailable_reason)
         if self.deadline is not None and time.time() >= self.deadline:
             reason = "任务期限已到，停止模型调用"
-            self.failures.append(reason)
+            self._add_failure(reason)
             return LLMResult(False, skipped_reason=reason)
         estimated = self._estimate(system, user, max_tokens)
         try:
-            self._check_budget(estimated)
+            self._reserve_budget(estimated)
         except BudgetExceeded as exc:
-            self.failures.append(str(exc))
+            self._add_failure(str(exc))
             return LLMResult(False, error=str(exc), skipped_reason=str(exc))
+
+        settled = False
+
+        def settle(actual: float = 0.0, *, count_call: bool = False) -> None:
+            nonlocal settled
+            if not settled:
+                self._settle_budget(estimated, actual, count_call=count_call)
+                settled = True
 
         url = self.config.base_url.rstrip("/") + "/chat/completions"
         payload = {
@@ -136,13 +171,15 @@ class LLMAdapter:
                                       timeout=self.config.timeout, retries=1, stage="llm")
         except Exception as exc:
             msg = f"{type(exc).__name__}: {exc}"[:200]
-            self.failures.append(msg)
+            settle()
+            self._add_failure(msg)
             return LLMResult(ok=False, error=f"模型请求失败 {msg}")
 
         if resp.status_code >= 400:
             # 不回显响应体，避免泄露任何凭证相关信息
             msg = f"HTTP {resp.status_code}"
-            self.failures.append(msg)
+            settle()
+            self._add_failure(msg)
             return LLMResult(ok=False, error=f"模型返回错误 {msg}")
 
         try:
@@ -152,30 +189,29 @@ class LLMAdapter:
             usage = body.get("usage") or {}
         except Exception as exc:
             msg = f"模型响应解析失败：{type(exc).__name__}"
-            self.failures.append(msg)
-            self.spent_cny += estimated  # 无法确认用量时保守预占，防止反复调用超预算
+            settle(estimated)  # 无法确认用量时保守预占，防止反复调用超预算
+            self._add_failure(msg)
             return LLMResult(ok=False, error=msg)
 
         try:
             tin = max(0, int(usage.get("prompt_tokens") or 0))
             tout = max(0, int(usage.get("completion_tokens") or 0))
         except (ValueError, TypeError, AttributeError):
-            self.spent_cny += estimated
-            self.failures.append("模型返回的用量格式无效，已保守预占预算")
+            settle(estimated)
+            self._add_failure("模型返回的用量格式无效，已保守预占预算")
             return LLMResult(False, error="模型用量格式无效")
         cost = (
             tin / 1_000_000 * self.config.price_in_cny_per_1m
             + tout / 1_000_000 * self.config.price_out_cny_per_1m
         )
-        self.spent_cny += cost
-        self.calls += 1
+        settle(cost, count_call=True)
         if self.task_id:
             save_llm_usage(self.task_id, step or "chat", self.config.model, tin, tout, cost)
 
         # 思考模型（如 glm-5.3-flash）的推理过程计入输出 token，
         # 超出 max_tokens 会把 JSON 拦腰截断，必须在解析前识别
         if finish_reason == "length":
-            self.failures.append(f"{step}：模型输出被截断，未获得有效结果")
+            self._add_failure(f"{step}：模型输出被截断，未获得有效结果")
             return LLMResult(
                 ok=False,
                 error="模型输出被 max_tokens 截断（思考模型推理占用输出预算），该次结果丢弃",
@@ -184,7 +220,7 @@ class LLMAdapter:
 
         parsed, err = _extract_json(content)
         if err:
-            self.failures.append(f"{step}：{err}")
+            self._add_failure(f"{step}：{err}")
             return LLMResult(ok=False, error=err, input_tokens=tin, output_tokens=tout, cost_cny=cost)
         return LLMResult(ok=True, data=parsed, input_tokens=tin, output_tokens=tout, cost_cny=cost)
 
@@ -206,6 +242,7 @@ class LLMAdapter:
         total_in = total_out = 0
         total_cost = 0.0
         failures: list[str] = []
+        jobs: list[tuple[list[Any], str, str, float]] = []
         for batch in batches:
             if not batch:
                 continue
@@ -213,26 +250,58 @@ class LLMAdapter:
             if len(user) > self.config.max_input_chars:
                 failures.append(f"批次 {len(batch)} 条超出输入长度限制，未截断结构化资料")
                 continue
+            estimated = self._estimate(system, user)
+            jobs.append((batch, system, user, estimated))
+
+        def invoke(job: tuple[list[Any], str, str, float]) -> LLMResult:
             try:
-                self._check_budget(self._estimate(system, user))
-            except BudgetExceeded as exc:
-                failures.append(str(exc))
+                return self.chat_json(job[1], job[2], step=step)
+            except Exception as exc:  # 单批异常不得中断其他独立批次
+                msg = f"批次 {len(job[0])} 条：{type(exc).__name__}: {exc}"[:200]
+                self._add_failure(msg)
+                return LLMResult(False, error=msg)
+
+        workers = max(1, self.config.parallel_calls)
+        pending = list(jobs)
+        stop = False
+        while pending and not stop:
+            with self._state_lock:
+                projected_cost = self.spent_cny + self._reserved_cny
+            wave: list[tuple[list[Any], str, str, float]] = []
+            for job in pending[:workers]:
+                if self.config.budget_cny > 0 and projected_cost + job[3] > self.config.budget_cny:
+                    break
+                projected_cost += job[3]
+                wave.append(job)
+            if not wave:
+                failures.append(f"已达到本次扫描的模型预算上限 {self.config.budget_cny:.2f} 元")
                 break
-            r = self.chat_json(system, user, step=step)
-            total_in += r.input_tokens
-            total_out += r.output_tokens
-            total_cost += r.cost_cny
-            if r.skipped_reason:
-                failures.append(r.skipped_reason)
-                break
-            if r.ok and isinstance(r.data, list):
-                merged.extend(r.data)
-            elif r.error:
-                failures.append(f"批次 {len(batch)} 条：{r.error[:120]}")
-            elif not isinstance(r.data, list):
-                failures.append("模型返回结构错误：预期 JSON 数组")
+
+            if len(wave) == 1:
+                results = [invoke(wave[0])]
+            else:
+                with ThreadPoolExecutor(max_workers=len(wave), thread_name_prefix=f"llm-{step}") as pool:
+                    futures = [pool.submit(invoke, job) for job in wave]
+                    # 按输入批次顺序合并，避免并发完成顺序改变报告内容顺序。
+                    results = [future.result() for future in futures]
+
+            for (batch, _, _, _), r in zip(wave, results):
+                total_in += r.input_tokens
+                total_out += r.output_tokens
+                total_cost += r.cost_cny
+                if r.skipped_reason:
+                    failures.append(r.skipped_reason)
+                    stop = True
+                if r.ok and isinstance(r.data, list):
+                    merged.extend(r.data)
+                elif r.error:
+                    failures.append(f"批次 {len(batch)} 条：{r.error[:120]}")
+                elif not isinstance(r.data, list):
+                    failures.append("模型返回结构错误：预期 JSON 数组")
+            del pending[:len(wave)]
         if failures:
-            self.failures.extend(failures)
+            with self._state_lock:
+                self.failures.extend(failures)
         if not merged and failures:
             return LLMResult(
                 ok=False,
@@ -314,13 +383,17 @@ class LLMAdapter:
         return self._run_batched([items[i:i+2] for i in range(0, len(items), 2)], build, "verify")
 
     def usage_summary(self) -> dict[str, Any]:
+        with self._state_lock:
+            calls = self.calls
+            spent_cny = self.spent_cny
+            failures = list(self.failures)
         return {
             "model": self.config.model,
             "available": self.available,
             "reason": "" if self.available else self.unavailable_reason,
-            "calls": self.calls,
-            "spent_cny": round(self.spent_cny, 4),
-            "failures": list(dict.fromkeys(self.failures)),
+            "calls": calls,
+            "spent_cny": round(spent_cny, 4),
+            "failures": list(dict.fromkeys(failures)),
         }
 
 

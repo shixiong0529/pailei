@@ -60,6 +60,8 @@ class LLMConfig:
     timeout: int = 120
     max_input_chars: int = 24000
     max_output_tokens: int = 2000
+    # 独立模型批次的并发数。默认 2，在不改变输入、参数和校验的前提下缩短等待时间。
+    parallel_calls: int = 2
     temperature: float = 0.1
     # 单次扫描预算（人民币）。未配置单价时按 0 计，仅累计 token 量。
     budget_cny: float = 3.0
@@ -134,6 +136,7 @@ def load_settings() -> Settings:
         timeout=_i("LLM_TIMEOUT", 120),
         max_input_chars=_i("LLM_MAX_INPUT_CHARS", 24000),
         max_output_tokens=_i("LLM_MAX_OUTPUT_TOKENS", 2000),
+        parallel_calls=max(1, _i("LLM_PARALLEL_CALLS", 2)),
         temperature=_f("LLM_TEMPERATURE", 0.1),
         budget_cny=_f("LLM_BUDGET_CNY", 3.0),
         price_in_cny_per_1m=_f("LLM_PRICE_IN_CNY_PER_1M", 0.0),
