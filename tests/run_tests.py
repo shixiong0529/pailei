@@ -478,6 +478,9 @@ class TestReportRendering(unittest.TestCase):
         self.assertIn("风险信号评分", html)
         self.assertIn("g-b", html)  # 100-8=92 → B
         self.assertNotIn("风险等级分布", html)
+        self.assertIn('class="responsive-table"', html)
+        self.assertIn('data-label="说明"', html)
+        self.assertIn("table.responsive-table td", html)
 
     def test_chart_renders_inline_svg(self):
         from app.report.charts import trend_chart

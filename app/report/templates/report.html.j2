@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{{ security.name or '未知主体' }}（{{ security.secucode }}）排雷报告</title>
 <style>
 :root{
@@ -11,6 +11,7 @@
   --ok:#16a34a; --info:#475569;
 }
 *{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",'Helvetica Neue',Arial,sans-serif;
   line-height:1.7;font-size:15px;}
@@ -18,7 +19,7 @@ body{margin:0;background:var(--bg);color:var(--text);
 header.hero{background:var(--card);border-radius:16px;padding:24px 26px;
   box-shadow:0 1px 3px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.04);margin-bottom:18px}
 .eyebrow{color:var(--faint);font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
-h1{margin:0 0 6px;font-size:26px;line-height:1.35;font-weight:700}
+h1{margin:0 0 6px;font-size:26px;line-height:1.35;font-weight:700;text-wrap:balance}
 .sub{color:var(--muted);font-size:14px}
 .meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 .meta div{font-size:13px;color:var(--muted)}
@@ -97,26 +98,86 @@ a:hover{text-decoration:underline}
 .toc .desc{color:var(--muted);font-size:12.5px}
 section{scroll-margin-top:16px}
 @media (max-width:640px){
-  .wrap{padding:14px 12px 48px}
-  section{padding:18px 16px}
-  header.hero{padding:18px 16px}
-  h1{font-size:21px}
-  table{font-size:12.5px;display:block;overflow-x:auto;max-width:100%}
-  thead,tbody{min-width:620px}
-  table th:first-child,table td:first-child{min-width:110px}
-  table th:nth-child(4),table td:nth-child(4){min-width:230px}
-  .badge{white-space:normal;min-width:65px;max-width:125px}
+  body{background:#eef2f7;font-size:15px;line-height:1.72}
+  .wrap{padding:0 0 40px;max-width:none}
+  header.hero,section{border-radius:0;margin-bottom:10px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+  header.hero{padding:20px 18px 18px;border-top:4px solid var(--primary)}
+  .eyebrow{font-size:11px;letter-spacing:.1em;margin-bottom:7px}
+  h1{font-size:23px;line-height:1.32;margin-bottom:8px}
+  .sub{font-size:13.5px;line-height:1.65}
+  .data-basis{margin-top:12px!important;padding:10px 12px;background:#f8fafc;border-radius:10px;color:#526071}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;padding-top:14px}
+  .meta div{font-size:12px}
+  .meta b{font-size:13.5px;overflow-wrap:anywhere}
+  section{padding:16px 14px}
+  section h2{margin-bottom:12px;padding:9px 12px;font-size:16px;line-height:1.45;border-radius:0 8px 8px 0}
+  section h3{margin:16px 0 10px;padding:8px 10px;font-size:14px;line-height:1.45}
+  section h3 span{display:block;flex-basis:100%;font-size:12px;line-height:1.5;margin-top:2px}
+  .hint{font-size:13.5px;line-height:1.7;margin-bottom:14px}
+  .toc{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .toc li{align-items:center;gap:7px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}
+  .toc li:last-child{border-bottom:1px solid var(--line)}
+  .toc .no{min-width:auto;font-size:12px;color:var(--primary)}
+  .toc a{font-size:13.5px;line-height:1.35;word-break:normal}
   .toc .desc{display:none}
+  .score-box{align-items:stretch;gap:12px;padding:14px;background:linear-gradient(135deg,#f8fafc,#eff6ff)}
+  .score-main{gap:10px}
+  .score-num{font-size:40px}
+  .score-grade{width:34px;height:34px;font-size:18px}
   .score-side{min-width:0;flex-basis:100%}
-  th,td{padding:7px 6px}
-  section h2{padding:8px 12px;font-size:15.5px}
-  section h3{padding:4px 10px;font-size:13px}
+  .score-label{font-size:14px;line-height:1.5}
+  .score-comp{font-size:12.5px;line-height:1.65}
+  .score-note{font-size:12px;line-height:1.6}
+  .warn,.info{padding:12px;font-size:13.5px;line-height:1.7}
+  .badge{white-space:normal;max-width:100%;line-height:1.55;padding:3px 8px;text-align:left}
+
+  /* 五列表格在手机端改为字段卡片，避免状态和说明被压成窄列。 */
+  table.responsive-table{display:block;width:100%;font-size:13.5px;border-collapse:separate}
+  table.responsive-table thead{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  table.responsive-table tbody{display:block;width:100%}
+  table.responsive-table tr{display:block;width:100%;margin:0 0 10px;padding:0 12px 4px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.03)}
+  table.responsive-table td{display:grid;grid-template-columns:58px minmax(0,1fr);gap:8px;width:100%;min-width:0!important;padding:8px 0;border:0;border-bottom:1px dashed #e8edf3;vertical-align:top;overflow-wrap:anywhere}
+  table.responsive-table td::before{content:attr(data-label);color:var(--muted);font-size:12px;font-weight:600;line-height:1.65}
+  table.responsive-table td[data-label="说明"],table.responsive-table td[data-label="发现"]{display:block}
+  table.responsive-table td[data-label="说明"]::before,table.responsive-table td[data-label="发现"]::before{display:block;margin-bottom:4px}
+  table.responsive-table td:first-child{display:block;margin:0 -12px 2px;padding:10px 12px;background:#f8fafc;border-bottom:1px solid var(--line);font-size:14px}
+  table.responsive-table td:first-child::before{display:none}
+  table.responsive-table td:last-child{border-bottom:0}
+  table.responsive-table td .mono{font-size:11.5px}
+  table.responsive-table td .badge{justify-self:start}
+  .cell-fold{margin-top:5px}
+  .cell-fold>summary{min-height:auto;padding:5px 0;border:0;background:transparent;font-size:12.5px}
+
+  .finding{padding:13px 12px;margin-bottom:10px;border-radius:10px}
+  .finding h4{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px;font-size:15px;line-height:1.5}
+  .finding .row{margin:0;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:14px;line-height:1.7;overflow-wrap:anywhere}
+  .finding .row:last-child{border-bottom:0}
+  .finding .label{display:block;margin:0 0 2px;color:#64748b;font-size:12px;line-height:1.5}
+  .quote{padding:10px;margin:8px 0;font-size:13.5px;line-height:1.7}
+  .finding details>summary,#sec-04>details>summary{display:flex;align-items:center;min-height:44px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#f8fafc;font-size:13.5px}
+  .finding details[open]>summary,#sec-04>details[open]>summary{border-color:#bfdbfe;background:#eff6ff}
+  #sec-04>details{margin-top:8px}
+  ul{padding-left:19px}
+  li{font-size:13.5px;line-height:1.7}
+  footer{padding:20px 18px;font-size:11.5px;line-height:1.7}
+}
+@media (max-width:360px){
+  header.hero{padding-left:15px;padding-right:15px}
+  h1{font-size:21px}
+  section{padding-left:12px;padding-right:12px}
+  .meta,.toc{grid-template-columns:1fr}
 }
 @media print{
   body{background:#fff}
   section,header.hero{box-shadow:none;border:1px solid #e5e7eb;page-break-inside:avoid}
   details{display:block}
   details summary{display:none}
+  table.responsive-table{display:table;width:100%;border-collapse:collapse;font-size:13.5px}
+  table.responsive-table thead{position:static;width:auto;height:auto;padding:0;margin:0;overflow:visible;clip:auto;white-space:normal;border:0}
+  table.responsive-table tbody{display:table-row-group;width:auto}
+  table.responsive-table tr{display:table-row;width:auto;margin:0;padding:0;border:0;border-radius:0;background:transparent;overflow:visible;box-shadow:none}
+  table.responsive-table td,table.responsive-table td:first-child{display:table-cell;width:auto;min-width:0;margin:0;padding:9px 10px;background:transparent;border:0;border-bottom:1px solid var(--line);font-size:13.5px}
+  table.responsive-table td::before{display:none}
 }
 </style>
 </head>
@@ -132,7 +193,7 @@ section{scroll-margin-top:16px}
      · 报表币种 {{ metrics.currency }}{% if security.currency %} · 证券交易币种 {{ security.currency }}{% endif %}
     {% if industry_pack and industry_pack != 'general' %} · 适用 {{ industry_pack }} 行业规则包{% endif %}
   </div>
-  <div class="sub" style="margin-top:4px">
+  <div class="sub data-basis" style="margin-top:4px">
     数据基础：{{ data_scope.announcement_range or '近 12 个月' }}公告 {{ data_scope.announcement_fetched or 0 }} 条 ·
     原文 {{ data_scope.documents_downloaded or 0 }} 份 · 证据 {{ data_scope.evidence_count or 0 }} 条
     （{{ data_scope.evidence_verified or 0 }} 条通过原文复核）
@@ -193,15 +254,15 @@ section{scroll-margin-top:16px}
 
   {% if summary.top_findings %}
   <h3>发现清单</h3>
-  <table>
+  <table class="responsive-table" aria-label="重点发现清单">
     <thead><tr><th style="width:22%">检查项</th><th style="width:12%">结论</th><th style="width:9%">严重度</th><th>发现了什么</th></tr></thead>
     <tbody>
     {% for f in summary.top_findings %}
       <tr>
-        <td><b><a href="#ev-{{ f.rule_id }}">{{ f.name }}</a></b><br><span class="mono" style="color:#94a3b8">{{ f.rule_id }}</span></td>
-        <td><span class="badge {{ status_class.get(f.status,'na') }}">{{ f.status }}</span></td>
-        <td class="{{ severity_class.get(f.severity,'sev-unknown') }}">{{ f.severity }}</td>
-        <td>{{ f.finding }}</td>
+        <td data-label="检查项"><b><a href="#ev-{{ f.rule_id }}">{{ f.name }}</a></b><br><span class="mono" style="color:#94a3b8">{{ f.rule_id }}</span></td>
+        <td data-label="结论"><span class="badge {{ status_class.get(f.status,'na') }}">{{ f.status }}</span></td>
+        <td data-label="严重度" class="{{ severity_class.get(f.severity,'sev-unknown') }}">{{ f.severity }}</td>
+        <td data-label="发现">{{ f.finding }}</td>
       </tr>
     {% endfor %}
     </tbody>
@@ -217,19 +278,19 @@ section{scroll-margin-top:16px}
   {% set visible = dim.results|rejectattr('status','in',['不适用','数据不足，无法判断'])|list %}
   {% if visible %}
   <h3>{{ dim.dimension }} <span style="font-weight:400;color:#94a3b8;font-size:12.5px">{{ dimension_desc.get(dim.dimension,'') }}</span></h3>
-  <table>
+  <table class="responsive-table" aria-label="{{ dim.dimension }}检查结果">
     <thead><tr><th style="width:20%">检查项</th><th style="width:11%">结论</th><th style="width:9%">严重度</th><th>说明</th><th style="width:14%">证据</th></tr></thead>
     <tbody>
     {% for r in visible %}
       <tr>
-        <td><b>{{ r.name }}</b><br><span class="mono" style="color:#94a3b8">{{ r.rule_id }}</span></td>
-        <td><span class="badge {{ status_class.get(r.status,'na') }}">{{ r.status }}</span></td>
-        <td class="{{ severity_class.get(r.severity,'sev-unknown') }}">{{ r.severity }}</td>
-        <td>{{ r.finding }}{% if r.why %}{% if r.why|length > 60 %}
+        <td data-label="检查项"><b>{{ r.name }}</b><br><span class="mono" style="color:#94a3b8">{{ r.rule_id }}</span></td>
+        <td data-label="结论"><span class="badge {{ status_class.get(r.status,'na') }}">{{ r.status }}</span></td>
+        <td data-label="严重度" class="{{ severity_class.get(r.severity,'sev-unknown') }}">{{ r.severity }}</td>
+        <td data-label="说明">{{ r.finding }}{% if r.why %}{% if r.why|length > 60 %}
           <details class="cell-fold"><summary>展开说明（{{ r.why|length }} 字）</summary>
             <span style="color:#6b7280">{{ r.why }}</span></details>
           {% else %}<br><span style="color:#6b7280">{{ r.why }}</span>{% endif %}{% endif %}</td>
-        <td>{% if r.evidence_ids %}{% if r.status in ('发现风险','需要关注') %}<a href="#ev-{{ r.rule_id }}">{{ r.evidence_ids|length }} 条</a>{% else %}{{ r.evidence_ids|length }} 条（见原文，无风险卡片）{% endif %}{% else %}—{% endif %}</td>
+        <td data-label="证据">{% if r.evidence_ids %}{% if r.status in ('发现风险','需要关注') %}<a href="#ev-{{ r.rule_id }}">{{ r.evidence_ids|length }} 条</a>{% else %}{{ r.evidence_ids|length }} 条（见原文，无风险卡片）{% endif %}{% else %}—{% endif %}</td>
       </tr>
     {% endfor %}
     </tbody>
