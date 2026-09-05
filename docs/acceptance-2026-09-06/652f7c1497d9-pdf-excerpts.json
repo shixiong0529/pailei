@@ -1,0 +1,20 @@
+{
+  "doc": {
+    "doc_id": "hkexnews:12297762",
+    "secucode": "00700",
+    "title": "中期報告 2026",
+    "publish_date": "2026-08-25",
+    "source": "hkexnews",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0825/2026082500557_c.pdf",
+    "doc_type": "年报",
+    "local_path": "/Users/shixiong/Developer/pailei/data/files/hkexnews/hkexnews_12297762.pdf",
+    "sha256": "6231374bc3d7bd104fcebb7735f9692050b55be32fa0f34d7d7f20478efa71f1",
+    "size_bytes": 5451089,
+    "page_count": 122,
+    "parsed": true,
+    "parse_error": "",
+    "text_excerpt": "",
+    "fetched_at": "2026-09-05T18:25:41"
+  },
+  "hits": []
+}

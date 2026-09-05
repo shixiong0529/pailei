@@ -1,0 +1,70 @@
+{
+  "reports": 17,
+  "render_success": 17,
+  "db_json_equal": 17,
+  "routes": [
+    {
+      "path": "/",
+      "status": 200,
+      "size": 7265
+    },
+    {
+      "path": "/history",
+      "status": 200,
+      "size": 8277
+    },
+    {
+      "path": "/admin",
+      "status": 200,
+      "size": 4667
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "size": 99
+    },
+    {
+      "path": "/api/tasks/missing",
+      "status": 404,
+      "size": 28
+    },
+    {
+      "path": "/report/missing",
+      "status": 404,
+      "size": 28
+    },
+    {
+      "path": "/download/missing",
+      "status": 404,
+      "size": 31
+    },
+    {
+      "path": "/scan/6c688308a030",
+      "status": 200,
+      "size": 5337
+    },
+    {
+      "path": "/report/6c688308a030",
+      "status": 200,
+      "size": 53145
+    },
+    {
+      "path": "/download/6c688308a030",
+      "status": 200,
+      "size": 53145
+    }
+  ],
+  "download": {
+    "equal": false,
+    "equal_without_footer_time": true,
+    "online_sha256": "018db8cd12dea187e35055b1923795cfdd1acdb898bbe30b00e5dfb126749a8a",
+    "download_sha256": "6949477d1b32e48918c12777c30cdd3e37df6e4797a3934f5607effb9064cdc8"
+  },
+  "repository": {
+    "head": "5be1083f20e8d113b6d034a72bc11bbb158fefaf",
+    "tracked_data_adapter_files": [],
+    "ignore_match": ".gitignore:2:data/\tapp/data/identity.py",
+    "clean_import_returncode": 1,
+    "clean_import_error": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import app.main\n  File \"/private/var/folders/6x/cgb2y8496073fdwgj_dkz35c0000gn/T/pailei-clean-checkout-f5su0k29/app/main.py\", line 25, in <module>\n    from app.data.eastmoney import EastmoneyClient\nModuleNotFoundError: No module named 'app.data'\n"
+  }
+}

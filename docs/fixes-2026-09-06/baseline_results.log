@@ -1,0 +1,65 @@
+test_affirmative_qualified_opinion_flagged (__main__.TestAuditOpinionScan.test_affirmative_qualified_opinion_flagged) ... ok
+test_checkbox_boilerplate_not_flagged (__main__.TestAuditOpinionScan.test_checkbox_boilerplate_not_flagged) ... ok
+test_disclaimer_of_opinion_flagged (__main__.TestAuditOpinionScan.test_disclaimer_of_opinion_flagged) ... ok
+test_going_concern_uncertainty_flagged (__main__.TestAuditOpinionScan.test_going_concern_uncertainty_flagged) ... ok
+test_standard_going_concern_boilerplate_not_flagged (__main__.TestAuditOpinionScan.test_standard_going_concern_boilerplate_not_flagged) ... ok
+test_fingerprint_stable (__main__.TestEvidenceVerification.test_fingerprint_stable) ... ok
+test_quote_absent_from_claimed_page (__main__.TestEvidenceVerification.test_quote_absent_from_claimed_page) ... ok
+test_quote_present_in_claimed_page (__main__.TestEvidenceVerification.test_quote_present_in_claimed_page) ... ok
+test_currency_preserved (__main__.TestFactSet.test_currency_preserved) ... ok
+test_error_fact_value_not_indexed (__main__.TestFactSet.test_error_fact_value_not_indexed) ... ok
+test_error_facts_excluded (__main__.TestFactSet.test_error_facts_excluded) ... ok
+test_half_year_not_mixed_with_annual (__main__.TestFactSet.test_half_year_not_mixed_with_annual)
+中报不得与年报口径混用做同比。 ... ok
+test_latest_is_most_recent (__main__.TestFactSet.test_latest_is_most_recent) ... ok
+test_periods_filtered_by_type (__main__.TestFactSet.test_periods_filtered_by_type) ... ok
+test_series_same_period_type (__main__.TestFactSet.test_series_same_period_type) ... ok
+test_current_negative_returns_none (__main__.TestGrowth.test_current_negative_returns_none) ... ok
+test_decline (__main__.TestGrowth.test_decline) ... ok
+test_near_zero_base (__main__.TestGrowth.test_near_zero_base) ... ok
+test_negative_base_returns_none (__main__.TestGrowth.test_negative_base_returns_none) ... ok
+test_normal_growth (__main__.TestGrowth.test_normal_growth) ... ok
+test_bank (__main__.TestIndustryClassification.test_bank) ... ok
+test_general (__main__.TestIndustryClassification.test_general) ... ok
+test_insurance (__main__.TestIndustryClassification.test_insurance) ... ok
+test_realestate (__main__.TestIndustryClassification.test_realestate) ... ok
+test_immaterial_inventory (__main__.TestMateriality.test_immaterial_inventory) ... ok
+test_material_inventory (__main__.TestMateriality.test_material_inventory) ... ok
+test_chart_handles_empty (__main__.TestReportRendering.test_chart_handles_empty) ... ok
+test_chart_handles_negatives (__main__.TestReportRendering.test_chart_handles_negatives) ... ok
+test_chart_renders_inline_svg (__main__.TestReportRendering.test_chart_renders_inline_svg) ... ok
+test_escapes_injection (__main__.TestReportRendering.test_escapes_injection) ... ok
+test_no_external_resources (__main__.TestReportRendering.test_no_external_resources) ... ok
+test_renders (__main__.TestReportRendering.test_renders) ... ok
+test_risk_score_block_renders (__main__.TestReportRendering.test_risk_score_block_renders) ... ok
+test_all_clean_scores_100_grade_a (__main__.TestRiskScore.test_all_clean_scores_100_grade_a) ... ok
+test_comp_string (__main__.TestRiskScore.test_comp_string) ... ok
+test_empty_dimensions (__main__.TestRiskScore.test_empty_dimensions) ... ok
+test_grade_boundaries (__main__.TestRiskScore.test_grade_boundaries) ... ok
+test_insufficient_and_na_no_deduction (__main__.TestRiskScore.test_insufficient_and_na_no_deduction) ... ok
+test_mixed_deduction_math (__main__.TestRiskScore.test_mixed_deduction_math) ... ok
+test_score_floor_zero (__main__.TestRiskScore.test_score_floor_zero) ... ok
+test_six_high_risks_score_28_grade_e (__main__.TestRiskScore.test_six_high_risks_score_28_grade_e) ... ok
+test_three_low_watch_scores_97_grade_a (__main__.TestRiskScore.test_three_low_watch_scores_97_grade_a) ... ok
+test_unknown_severity_deducts_default (__main__.TestRiskScore.test_unknown_severity_deducts_default) ... ok
+test_industry_exclusions (__main__.TestRuleStatusCoverage.test_industry_exclusions)
+银行不应触发资产负债率等普通企业财务结构规则。 ... ok
+test_realestate_uses_special_leverage_rule (__main__.TestRuleStatusCoverage.test_realestate_uses_special_leverage_rule) ... ok
+test_registry_size (__main__.TestRuleStatusCoverage.test_registry_size) ... ok
+test_rule_ids_unique (__main__.TestRuleStatusCoverage.test_rule_ids_unique) ... ok
+test_status_values (__main__.TestRuleStatusCoverage.test_status_values) ... ok
+test_missing_values (__main__.TestSafeDiv.test_missing_values) ... ok
+test_negative_denominator_allowed (__main__.TestSafeDiv.test_negative_denominator_allowed) ... ok
+test_normal (__main__.TestSafeDiv.test_normal) ... ok
+test_zero_denominator (__main__.TestSafeDiv.test_zero_denominator) ... ok
+test_a_share_keywords_simplified (__main__.TestTextUtils.test_a_share_keywords_simplified) ... ok
+test_evidence_keywords_include_both_forms (__main__.TestTextUtils.test_evidence_keywords_include_both_forms) ... ok
+test_traditional_conversion (__main__.TestTextUtils.test_traditional_conversion) ... ok
+test_allows_https (__main__.TestUrlSafety.test_allows_https) ... ok
+test_rejects_file (__main__.TestUrlSafety.test_rejects_file) ... ok
+test_rejects_javascript (__main__.TestUrlSafety.test_rejects_javascript) ... ok
+
+----------------------------------------------------------------------
+Ran 58 tests in 0.145s
+
+OK

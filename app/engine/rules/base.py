@@ -23,7 +23,7 @@ from app.engine.metrics import MetricsBundle
 from app.engine.normalize import FactSet
 from app.data.pdftext import ParsedDoc
 
-RULE_VERSION = "1.0"
+RULE_VERSION = "1.1"
 
 
 @dataclass
@@ -104,6 +104,12 @@ class RuleContext:
         default_factory=list
     )
 
+    def current_fact(self, item: str):
+        fact = self.facts.get(item, self.metrics.latest_period)
+        if fact and fact.unit == "元" and (fact.currency in {"", "未核实"} or fact.currency != self.metrics.currency):
+            return None
+        return fact
+
     def docs_of_type(self, *types: str) -> list[DisclosureDoc]:
         return [d for d in self.docs if d.doc_type in types]
 
@@ -183,7 +189,7 @@ class Rule:
                     missing.append(ctx.metrics.metrics.get(key).label if key in ctx.metrics.metrics else key)
             elif req.startswith("fact:"):
                 key = req.split(":", 1)[1]
-                if ctx.facts.latest(key) is None:
+                if ctx.current_fact(key) is None:
                     missing.append(key)
         return missing
 
@@ -201,6 +207,7 @@ class RuleOutcome:
     strength: EvidenceStrength = EvidenceStrength.PARTIAL
     ai_interpreted: bool = False
     still_effective: Optional[bool] = None
+    industry_pack: str = "general"
 
     def to_result(self) -> "object":
         from app.core.models import RuleResult
@@ -217,7 +224,7 @@ class RuleOutcome:
             evidence_ids=list(self.evidence_ids),
             mitigations=list(self.mitigations),
             to_verify=list(self.to_verify),
-            industry_pack="general",
+            industry_pack=self.industry_pack,
             rule_version=self.rule.version,
             ai_interpreted=self.ai_interpreted,
             still_effective=self.still_effective,

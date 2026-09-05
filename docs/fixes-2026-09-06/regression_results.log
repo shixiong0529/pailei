@@ -1,0 +1,99 @@
+/Users/shixiong/.workbuddy/binaries/python/envs/default/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_01_fully_restricted_cash_is_zero (test_acceptance.AuditChecks.test_01_fully_restricted_cash_is_zero) ... ok
+test_02_missing_restricted_cash_not_normal (test_acceptance.AuditChecks.test_02_missing_restricted_cash_not_normal) ... ok
+test_03_negative_profit_positive_cash_not_inverted (test_acceptance.AuditChecks.test_03_negative_profit_positive_cash_not_inverted) ... ok
+test_04_both_negative_not_healthy_profit_cover (test_acceptance.AuditChecks.test_04_both_negative_not_healthy_profit_cover) ... ok
+test_05_small_receivables_materiality (test_acceptance.AuditChecks.test_05_small_receivables_materiality) ... ok
+test_06_audit_positive_signal_reaches_rule (test_acceptance.AuditChecks.test_06_audit_positive_signal_reaches_rule) ... ok
+test_07_traditional_audit_signal (test_acceptance.AuditChecks.test_07_traditional_audit_signal) ... ok
+test_08_empty_pdf_not_normal_audit (test_acceptance.AuditChecks.test_08_empty_pdf_not_normal_audit) ... ok
+test_09_prefix_only_quote_must_fail (test_acceptance.AuditChecks.test_09_prefix_only_quote_must_fail) ... ok
+test_10_same_page_topic_evidence_not_overwritten (test_acceptance.AuditChecks.test_10_same_page_topic_evidence_not_overwritten) ... ok
+test_11_precise_evidence_reverify_by_doc_id (test_acceptance.AuditChecks.test_11_precise_evidence_reverify_by_doc_id) ... ok
+test_12_unrelated_quote_not_confirmed_risk (test_acceptance.AuditChecks.test_12_unrelated_quote_not_confirmed_risk) ... ok
+test_13_cninfo_classification_preserves_risk (test_acceptance.AuditChecks.test_13_cninfo_classification_preserves_risk) ... ok
+test_14_hk_warning_not_swallowed_by_results (test_acceptance.AuditChecks.test_14_hk_warning_not_swallowed_by_results) ... ok
+test_15_resolved_freeze_not_current_high_risk (test_acceptance.AuditChecks.test_15_resolved_freeze_not_current_high_risk) ... ok
+test_16_missing_previous_year_not_yoy (test_acceptance.AuditChecks.test_16_missing_previous_year_not_yoy) ... ok
+test_17_currency_mismatch_not_compared (test_acceptance.AuditChecks.test_17_currency_mismatch_not_compared) ... ok
+test_18_five_complete_years_plus_latest (test_acceptance.AuditChecks.test_18_five_complete_years_plus_latest) ... ok
+test_19_fact_identity_retains_scope (test_acceptance.AuditChecks.test_19_fact_identity_retains_scope) ... ok
+test_20_hk_percentage_normalized_to_ratio (test_acceptance.AuditChecks.test_20_hk_percentage_normalized_to_ratio) ... ok
+test_21_missing_goodwill_denominator_not_normal (test_acceptance.AuditChecks.test_21_missing_goodwill_denominator_not_normal) ... ok
+test_22_missing_advance_not_treated_as_zero (test_acceptance.AuditChecks.test_22_missing_advance_not_treated_as_zero) ... ok
+test_23_ssrf_redirect_revalidated (test_acceptance.AuditChecks.test_23_ssrf_redirect_revalidated) ... ok
+test_24_ipv6_mapped_loopback_rejected (test_acceptance.AuditChecks.test_24_ipv6_mapped_loopback_rejected) ... ok
+test_25_template_really_strict (test_acceptance.AuditChecks.test_25_template_really_strict) ... ok
+test_26_report_displays_actual_gap (test_acceptance.AuditChecks.test_26_report_displays_actual_gap) ... ok
+test_27_zero_coverage_not_reassuring (test_acceptance.AuditChecks.test_27_zero_coverage_not_reassuring) ... ok
+test_28_llm_enabled_switch (test_acceptance.AuditChecks.test_28_llm_enabled_switch) ... ok
+test_29_llm_budget_partial_failure_visible (test_acceptance.AuditChecks.test_29_llm_budget_partial_failure_visible) ... ok
+test_30_network_disable_is_honored (test_acceptance.AuditChecks.test_30_network_disable_is_honored) ... ok
+test_31_llm_event_doc_id_must_exist (test_acceptance.AuditChecks.test_31_llm_event_doc_id_must_exist) ... ok
+test_32_llm_parse_failure_nonfatal (test_acceptance.AuditChecks.test_32_llm_parse_failure_nonfatal) ... ok
+test_33_ai_downgrade_recomputes_coverage (test_acceptance.AuditChecks.test_33_ai_downgrade_recomputes_coverage) ... ok
+test_34_financial_fact_metadata_survives_db (test_acceptance.AuditChecks.test_34_financial_fact_metadata_survives_db) ... ok
+test_35_log_counts_not_duplicated (test_acceptance.AuditChecks.test_35_log_counts_not_duplicated) ... ok
+test_36_industry_pack_saved_correctly (test_acceptance.AuditChecks.test_36_industry_pack_saved_correctly) ... ok
+test_37_non_object_request_is_4xx (test_acceptance.AuditChecks.test_37_non_object_request_is_4xx) ... ok
+test_38_ambiguous_name_not_auto_selected (test_acceptance.AuditChecks.test_38_ambiguous_name_not_auto_selected) ... ok
+test_39_noncompany_security_rejected (test_acceptance.AuditChecks.test_39_noncompany_security_rejected) ... ok
+test_40_explicit_wrong_exchange_rejected (test_acceptance.AuditChecks.test_40_explicit_wrong_exchange_rejected) ... ok
+test_41_completed_task_not_partial_for_basis_note (test_acceptance.AuditChecks.test_41_completed_task_not_partial_for_basis_note) ... ok
+test_42_expired_deadline_stops_expensive_steps (test_acceptance.AuditChecks.test_42_expired_deadline_stops_expensive_steps) ... ok
+test_43_five_parallel_pipelines_complete_without_db_lock (test_acceptance.AuditChecks.test_43_five_parallel_pipelines_complete_without_db_lock) ... ok
+test_44_db_rollback_works (test_acceptance.AuditChecks.test_44_db_rollback_works) ... ok
+test_45_ssrf_direct_loopback_rejected (test_acceptance.AuditChecks.test_45_ssrf_direct_loopback_rejected) ... ok
+test_46_partial_llm_batch_preserves_good_results (test_acceptance.AuditChecks.test_46_partial_llm_batch_preserves_good_results) ... ok
+test_47_unavailable_llm_never_calls_network (test_acceptance.AuditChecks.test_47_unavailable_llm_never_calls_network) ... ok
+test_48_download_limit_is_enforced (test_acceptance.AuditChecks.test_48_download_limit_is_enforced) ... ok
+test_49_adjusted_debt_ratio_denominator (test_acceptance.AuditChecks.test_49_adjusted_debt_ratio_denominator) ... ok
+test_50_duplicate_running_submissions_reused (test_acceptance.AuditChecks.test_50_duplicate_running_submissions_reused) ... ok
+test_51_read_connection_is_closed (test_acceptance.AuditChecks.test_51_read_connection_is_closed) ... ok
+test_52_standard_unqualified_audit_not_flagged (test_acceptance.AuditChecks.test_52_standard_unqualified_audit_not_flagged) ... ok
+test_53_full_rule_engine_routes_all_industry_packs (test_acceptance.AuditChecks.test_53_full_rule_engine_routes_all_industry_packs) ... ok
+test_a_indicator_without_type_is_not_annual (test_hardening.HardeningTests.test_a_indicator_without_type_is_not_annual) ... ok
+test_all_profit_cash_sign_combinations (test_hardening.HardeningTests.test_all_profit_cash_sign_combinations) ... ok
+test_audit_signal_full_rule_evidence_result (test_hardening.HardeningTests.test_audit_signal_full_rule_evidence_result) ... ok
+test_bad_field_types_and_length_return_4xx (test_hardening.HardeningTests.test_bad_field_types_and_length_return_4xx) ... ok
+test_cash_equivalents_not_reduced_twice (test_hardening.HardeningTests.test_cash_equivalents_not_reduced_twice) ... ok
+test_connection_uses_verified_ip_not_second_dns_lookup (test_hardening.HardeningTests.test_connection_uses_verified_ip_not_second_dns_lookup) ... ok
+test_contract_liabilities_missing_is_not_zero (test_hardening.HardeningTests.test_contract_liabilities_missing_is_not_zero) ... ok
+test_currency_not_copied_to_unmatched_year (test_hardening.HardeningTests.test_currency_not_copied_to_unmatched_year) ... ok
+test_currency_requires_financial_values_not_trading_counter (test_hardening.HardeningTests.test_currency_requires_financial_values_not_trading_counter) ... ok
+test_currency_unverified_blocks_monetary_ratios (test_hardening.HardeningTests.test_currency_unverified_blocks_monetary_ratios) ... ok
+test_database_migration_preserves_existing_rows (test_hardening.HardeningTests.test_database_migration_preserves_existing_rows) ... ok
+test_deadline_prevents_transport (test_hardening.HardeningTests.test_deadline_prevents_transport) ... ok
+test_direct_llm_budget_holds_before_request (test_hardening.HardeningTests.test_direct_llm_budget_holds_before_request) ... ok
+test_download_redirect_private_not_contacted (test_hardening.HardeningTests.test_download_redirect_private_not_contacted) ... ok
+test_evidence_document_and_tail_and_page_must_match (test_hardening.HardeningTests.test_evidence_document_and_tail_and_page_must_match) ... ok
+test_financial_nonfinite_rejected (test_hardening.HardeningTests.test_financial_nonfinite_rejected) ... ok
+test_full_restricted_zero_rules_risk (test_hardening.HardeningTests.test_full_restricted_zero_rules_risk) ... ok
+test_identical_real_requests_each_count_once (test_hardening.HardeningTests.test_identical_real_requests_each_count_once) ... ok
+test_latest_restatement_not_input_order (test_hardening.HardeningTests.test_latest_restatement_not_input_order) ... ok
+test_llm_empty_events_is_valid_success (test_hardening.HardeningTests.test_llm_empty_events_is_valid_success) ... ok
+test_llm_network_switch_disables_all_steps (test_hardening.HardeningTests.test_llm_network_switch_disables_all_steps) ... ok
+test_model_verification_invalid_shape_is_reported (test_hardening.HardeningTests.test_model_verification_invalid_shape_is_reported) ... ok
+test_multicast_addresses_rejected (test_hardening.HardeningTests.test_multicast_addresses_rejected) ... ok
+test_numeric_evidence_does_not_select_address_page (test_hardening.HardeningTests.test_numeric_evidence_does_not_select_address_page) ... /Users/shixiong/Developer/pailei/app/engine/evidence_binding.py:47: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x108895990>
+  for item in GROUPS.get(outcome.rule.rule_id, []):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_old_goodwill_not_divided_by_current_assets (test_hardening.HardeningTests.test_old_goodwill_not_divided_by_current_assets) ... ok
+test_online_download_and_saved_html_equal (test_hardening.HardeningTests.test_online_download_and_saved_html_equal) ... ok
+test_partial_result_cache_reused (test_hardening.HardeningTests.test_partial_result_cache_reused) ... ok
+test_pdf_hard_timeout_terminates_worker (test_hardening.HardeningTests.test_pdf_hard_timeout_terminates_worker) ... ok
+test_period_start_noncalendar_and_q1 (test_hardening.HardeningTests.test_period_start_noncalendar_and_q1) ... ok
+test_queue_limit_rejects_before_task_creation (test_hardening.HardeningTests.test_queue_limit_rejects_before_task_creation) ... ok
+test_real_astock_shape_and_index_filtered (test_hardening.HardeningTests.test_real_astock_shape_and_index_filtered) ... ok
+test_single_fuzzy_candidate_requires_confirmation (test_hardening.HardeningTests.test_single_fuzzy_candidate_requires_confirmation) ... ok
+test_slow_dns_wait_is_bounded (test_hardening.HardeningTests.test_slow_dns_wait_is_bounded) ... ok
+test_stale_rule_version_cache_is_not_reused (test_hardening.HardeningTests.test_stale_rule_version_cache_is_not_reused) ... ok
+test_strict_template_rejects_missing_required_field (test_hardening.HardeningTests.test_strict_template_rejects_missing_required_field) ... ok
+test_zero_equity_not_replaced_by_alternate (test_hardening.HardeningTests.test_zero_equity_not_replaced_by_alternate) ... ok
+
+----------------------------------------------------------------------
+Ran 89 tests in 0.814s
+
+OK

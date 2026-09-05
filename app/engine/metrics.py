@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Optional
+from datetime import date
 
 from app.core.models import Market, PeriodType, Statement
 from app.engine.normalize import FactSet, growth, safe_div
@@ -120,14 +121,18 @@ def compute_metrics(
         return MetricsBundle(notes=["未获取到任何财务报告期，所有指标无法计算"])
 
     # 同口径上一期
-    same_type_periods = facts.periods(ptype)
-    prior = same_type_periods[1] if len(same_type_periods) > 1 else ""
-    currencies = facts.currencies()
+    day = date.fromisoformat(latest)
+    try:
+        prior_date = day.replace(year=day.year - 1).isoformat()
+    except ValueError:
+        prior_date = day.replace(year=day.year - 1, day=28).isoformat()
+    prior = prior_date if prior_date in facts.periods(ptype) else ""
+    currencies = sorted({f.currency for f in facts._index.values() if f.period_end == latest and f.unit == "元"})
     bundle = MetricsBundle(
         latest_period=latest,
         latest_period_type=ptype,
         prior_period=prior,
-        currency=currencies[0] if currencies else "CNY",
+        currency=currencies[0] if len(currencies) == 1 else "未核实",
     )
     basis = f"{latest[:4]}年{ptype.label}"
     prior_basis = f"{prior[:4]}年{ptype.label}" if prior else ""
@@ -142,10 +147,21 @@ def compute_metrics(
         )
 
     def cur(item: str) -> Optional[float]:
-        return facts.value(item, latest)
+        f = facts.get(item, latest)
+        if f and f.unit == "元" and (len(currencies) > 1 or f.currency in ("", "未核实", "UNKNOWN")):
+            return None
+        return f.value if f else None
 
     def prev(item: str) -> Optional[float]:
-        return facts.value(item, prior) if prior else None
+        current = facts.get(item, latest)
+        previous = facts.get(item, prior) if prior else None
+        if not current or not previous:
+            return None
+        if (current.currency, current.unit, current.period_type, current.consolidated) != (previous.currency, previous.unit, previous.period_type, previous.consolidated):
+            return None
+        if current.period_start and previous.period_start and current.period_start[4:] != previous.period_start[4:]:
+            return None
+        return previous.value
 
     # ---------------- 规模与盈利 ----------------
     revenue_items = ["total_revenue", "operating_revenue", "revenue"]
@@ -194,13 +210,15 @@ def compute_metrics(
     # ---------------- 资产与偿债 ----------------
     assets = cur("total_assets")
     liabilities = cur("total_liabilities")
-    equity = cur("total_equity") or cur("net_assets")
+    equity = cur("total_equity") if cur("total_equity") is not None else cur("net_assets")
     put("total_assets", "总资产", assets, unit="元")
     put("total_liabilities", "总负债", liabilities, unit="元")
     put("total_equity", "所有者权益", equity, unit="元")
     put("debt_ratio", "资产负债率", safe_div(liabilities, assets), formula="总负债 / 总资产")
 
     cash = cur("cash")
+    if cash is None and cur("cash_equivalents") is not None and cur("restricted_cash") is not None:
+        cash = cur("cash_equivalents") + cur("restricted_cash")
     restricted = cur("restricted_cash")
     put("cash", "货币资金", cash, unit="元")
     put("restricted_cash", "受限资金", restricted, unit="元")
@@ -208,15 +226,18 @@ def compute_metrics(
     lt_debt = cur("long_term_borrowings")
     put("short_term_borrowings", "短期借款", st_debt, unit="元")
     put("long_term_borrowings", "长期借款", lt_debt, unit="元")
-    total_debt = None if (st_debt is None and lt_debt is None) else (
+    total_debt = None if (st_debt is None or lt_debt is None) else (
         (st_debt or 0) + (lt_debt or 0)
     )
     put("total_interest_bearing_debt", "有息负债（短借+长借）", total_debt, unit="元")
     # 受限资金不计入可自由偿债现金（方案 §5）
-    usable_cash = (cash or 0) - (restricted or 0) if cash is not None else None
+    cash_equivalents = cur("cash_equivalents")
+    usable_cash = cash_equivalents if cash_equivalents is not None else (
+        cash - restricted if cash is not None and restricted is not None and cash >= restricted else None
+    )
     put("usable_cash", "可自由使用现金（扣除受限）", usable_cash, unit="元",
         formula="货币资金 - 受限存款及现金")
-    put("cash_to_short_debt", "现金 / 短期借款", safe_div(usable_cash or cash, st_debt),
+    put("cash_to_short_debt", "现金 / 短期借款", safe_div(usable_cash, st_debt),
         formula="(货币资金 - 受限资金) / 短期借款")
     put("debt_to_assets_ex_cash", "有息负债 / 总资产", safe_div(total_debt, assets))
 
@@ -229,7 +250,8 @@ def compute_metrics(
             formula="(流动资产 - 存货) / 流动负债")
 
     op_profit = cur("operating_profit")
-    fin_exp = cur("finance_expense") or cur("finance_cost")
+    fin_exp = cur("finance_expense") if cur("finance_expense") is not None else cur("finance_cost")
+    put("operating_profit", "营业利润", op_profit, unit="元")
     put("interest_coverage", "利息保障倍数", safe_div(op_profit, fin_exp), unit="倍",
         formula="营业利润 / 财务费用")
 
@@ -279,10 +301,10 @@ def compute_metrics(
     # ---------------- 来自主要指标的补充 ----------------
     for key, label in (("roe_avg", "ROE"), ("roa", "ROA"), ("ar_days", "应收账款周转天数"),
                        ("inventory_days", "存货周转天数")):
-        point = facts.latest(key)
+        point = facts.get(key, latest)
         if point:
             unit = "天" if key.endswith("_days") else "比率"
-            put(key, label, point.value, unit=unit, formula="数据服务商主要指标")
+            put(key, label, cur(key), unit=unit, formula="数据服务商主要指标")
 
     # ---------------- 口径提示 ----------------
     bundle.notes.append(

@@ -55,6 +55,9 @@ def _r_fq01(ctx: RuleContext):
     )
     if ratio is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, finding, "")
+    if np_ is not None and np_ <= 0:
+        return (RuleStatus.NOT_APPLICABLE, Severity.UNKNOWN, finding,
+                "净利润非正，现金流对盈利的覆盖倍数不适用；亏损和现金净流出分别由 FQ08、FQ02、OP05 检查")
     if ratio < 0:
         return (
             RuleStatus.RISK, Severity.HIGH, finding,
@@ -86,7 +89,7 @@ def _materiality(ctx: RuleContext, item_key: str, threshold: float = 0.02) -> Op
 
     返回 None 表示无法判断（缺少总资产或科目数据），此时不做重要性过滤。
     """
-    ratio = ctx.metrics.get(f"{item_key}_to_assets")
+    ratio = ctx.metrics.get("ar_to_assets" if item_key == "accounts_receivable" else f"{item_key}_to_assets")
     if ratio is None:
         return None
     return ratio >= threshold
@@ -292,7 +295,7 @@ def _r_fq12(ctx: RuleContext):
 
 def _r_sv01(ctx: RuleContext):
     ratio = ctx.metrics.get("cash_to_short_debt")
-    cash = ctx.metrics.get("usable_cash") or ctx.metrics.get("cash")
+    cash = ctx.metrics.get("usable_cash")
     st = ctx.metrics.get("short_term_borrowings")
     finding = f"（货币资金 - 受限资金）/ 短期借款 = {fnum(ratio, '倍')}；可用现金 {fmoney(cash)}，短期借款 {fmoney(st)}"
     if ratio is None:
@@ -334,7 +337,7 @@ def _r_sv03(ctx: RuleContext):
 def _r_sv04(ctx: RuleContext):
     ratio = ctx.metrics.get("interest_coverage")
     op_profit = ctx.metrics.get("operating_profit")
-    fin_exp = ctx.facts.latest("finance_expense") or ctx.facts.latest("finance_cost")
+    fin_exp = ctx.current_fact("finance_expense") or ctx.current_fact("finance_cost")
     fin_value = fin_exp.value if fin_exp else None
     finding = f"利息保障倍数 = {fnum(ratio, '倍')}"
     # 财务费用为负意味着利息净收入而非净支出，此时该倍数没有经济含义
@@ -382,7 +385,7 @@ def _r_sv06(ctx: RuleContext):
 def _r_sv07(ctx: RuleContext):
     restricted = ctx.metrics.get("restricted_cash")
     cash = ctx.metrics.get("cash")
-    if cash is None:
+    if cash is None or cash <= 0 or restricted is None:
         return (
             RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
             f"受限资金 {fmoney(restricted)}，货币资金 {fmoney(cash)}", "",
@@ -668,7 +671,9 @@ def _r_op02(ctx: RuleContext):
             )
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, "未获取到公告清单，无法判断审计意见", "")
 
-    scanned = [(d, ctx.parsed[d.doc_id]) for d in audit_docs if d.doc_id in ctx.parsed]
+    scanned = [(d, ctx.parsed[d.doc_id]) for d in audit_docs
+               if d.doc_id in ctx.parsed and not ctx.parsed[d.doc_id].error
+               and ctx.parsed[d.doc_id].full_text.strip()]
     if not scanned:
         return (
             RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
@@ -683,7 +688,7 @@ def _r_op02(ctx: RuleContext):
     if hits:
         doc, hit = hits[0]
         severity = Severity.HIGH if hit["severity"] == "high" else Severity.HIGH
-        ctx._pending_evidence.append(
+        ctx.pending_evidence.append(
             (doc, str(hit["quote"]), f"第 {hit['page']} 页", ["审计意见"])
         )
         return (
@@ -692,6 +697,10 @@ def _r_op02(ctx: RuleContext):
             "非标准无保留意见或持续经营重大不确定性，是财务报告可靠性的重大警示；"
             "该结论由否定式敏感匹配得出，仍建议人工复核审计报告意见段",
         )
+    from app.data.pdftext import has_audit_opinion_section
+    if not any(has_audit_opinion_section(p) for _, p in scanned):
+        return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
+                "已解析正文，但未定位到明确的审计意见段", "未检出关键词不能作为标准审计意见的依据")
     return (
         RuleStatus.NORMAL, Severity.LOW,
         f"已解析 {len(scanned)} 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
@@ -720,7 +729,7 @@ def _r_op03(ctx: RuleContext):
 
 def _r_op04(ctx: RuleContext):
     """商誉与减值：数据源未提供商誉科目时明确标注不足。"""
-    goodwill = ctx.facts.latest("goodwill")
+    goodwill = ctx.current_fact("goodwill")
     if goodwill is None:
         return (
             RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
@@ -730,7 +739,9 @@ def _r_op04(ctx: RuleContext):
     assets = ctx.metrics.get("total_assets")
     ratio = (goodwill.value / assets) if assets else None
     finding = f"商誉 {fmoney(goodwill.value)}，占总资产 {fnum(ratio)}"
-    if ratio is not None and ratio > 0.20:
+    if ratio is None:
+        return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, finding, "缺少有效的总资产口径")
+    if ratio > 0.20:
         return (RuleStatus.WATCH, Severity.MEDIUM, finding, "商誉占资产比重较高，存在减值压力")
     return (RuleStatus.NORMAL, Severity.LOW, finding, "商誉占比不高")
 

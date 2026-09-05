@@ -40,19 +40,24 @@ class FactSet:
     _index: dict[tuple[str, str], FinancialFact] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
+        self._index.clear()
         for f in self.facts:
-            if f.std_item == "__error__" or f.value is None:
-                continue
-            if not f.period_end:
-                continue
-            self._index[(f.std_item, f.period_end)] = f
+            self._index_fact(f)
+
+    def _index_fact(self, f: FinancialFact) -> None:
+        # 原始列表完整保留母公司/合并及重述版本；计算只用合并报表，选最新公告。
+        if f.std_item == "__error__" or f.value is None or not f.period_end or not f.consolidated:
+            return
+        key = (f.std_item, f.period_end)
+        previous = self._index.get(key)
+        rank = lambda x: (x.notice_date, x.statement != Statement.INDICATOR, x.fetched_at)
+        if previous is None or rank(f) > rank(previous):
+            self._index[key] = f
 
     def add(self, facts: Iterable[FinancialFact]) -> None:
         for f in facts:
             self.facts.append(f)
-            if f.std_item == "__error__" or f.value is None or not f.period_end:
-                continue
-            self._index[(f.std_item, f.period_end)] = f
+            self._index_fact(f)
 
     def get(self, std_item: str, period_end: str) -> Optional[FinancialFact]:
         return self._index.get((std_item, period_end))
@@ -62,11 +67,11 @@ class FactSet:
         return f.value if f else None
 
     def periods(self, period_type: PeriodType | None = None) -> list[str]:
-        got = {f.period_end for f in self.facts if f.period_end and f.value is not None}
+        got = {f.period_end for f in self._index.values() if f.period_end and f.value is not None}
         if period_type:
             got = {
                 f.period_end
-                for f in self.facts
+                for f in self._index.values()
                 if f.period_end and f.value is not None and f.period_type is period_type
             }
         return sorted(got, reverse=True)
@@ -76,7 +81,7 @@ class FactSet:
     ) -> list[Point]:
         """取某科目的时间序列，默认只返回同一期次口径（保证可比）。"""
         points: list[Point] = []
-        for f in self.facts:
+        for f in self._index.values():
             if f.std_item != std_item or f.value is None or not f.period_end:
                 continue
             if period_type and f.period_type is not period_type:
@@ -109,7 +114,7 @@ class FactSet:
 
     def latest_period_type(self) -> Optional[PeriodType]:
         period = self.latest_period()
-        for f in self.facts:
+        for f in self._index.values():
             if f.period_end == period:
                 return f.period_type
         return None

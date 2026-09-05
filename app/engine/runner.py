@@ -124,40 +124,53 @@ def attach_evidence(outcome: RuleOutcome, ctx: RuleContext) -> None:
     if outcome.status in (RuleStatus.NORMAL, RuleStatus.NOT_APPLICABLE):
         return
     ids: list[str] = []
-
+    precise: set[str] = set()
+    from app.data.pdftext import verify_evidence
     for doc, quote, location, topics in ctx.take_pending_evidence():
+        quote = quote[:900]
         ev = Evidence(
             evidence_id=f"{doc.doc_id}:loc{Evidence.fingerprint_of(quote)}",
-            doc_id=doc.doc_id,
-            title=doc.title,
-            quote=quote[:900],
-            location=location,
-            url=doc.url,
-            source=doc.source,
-            publish_date=doc.publish_date,
+            doc_id=doc.doc_id, title=doc.title, quote=quote, location=location,
+            url=doc.url, source=doc.source, publish_date=doc.publish_date,
             fingerprint=Evidence.fingerprint_of(quote),
-            verified=True,
-            verify_note="规则检查时定位的原文片段",
         )
-        ids.append(ctx.evidence.add(ev, topics=topics, doc_type=doc.doc_type))
+        if doc.doc_id in ctx.parsed:
+            verify_evidence(ev, ctx.parsed[doc.doc_id])
+        eid = ctx.evidence.add(ev, topics=topics, doc_type=doc.doc_type)
+        ids.append(eid)
+        if ev.verified:
+            precise.add(eid)
 
-    for topic in RULE_EVIDENCE_TOPICS.get(outcome.rule.rule_id, []):
-        ids.extend(ctx.evidence.by_topic(topic, limit=2))
+    if not ids:
+        from app.engine.evidence_binding import numeric_evidence
+        ids.extend(numeric_evidence(outcome, ctx))
+    if not ids:
+        for topic in RULE_EVIDENCE_TOPICS.get(outcome.rule.rule_id, []):
+            for eid in ctx.evidence.by_topic(topic, limit=6):
+                ev = ctx.evidence.get(eid)
+                if not ev or not ev.verified:
+                    continue
+                # 财务关键词只作为相关阅读材料；不能确认数值、期间和计算结论。
+                if ev.publish_date and ev.publish_date < ctx.metrics.latest_period:
+                    continue
+                ids.append(eid)
+    # 事件规则只绑定其实际命中的公告，不能回退到同维度的任意年报/处罚。
+    if not ids:
+        for doc in ctx.docs:
+            if doc.title and doc.title in outcome.finding:
+                ids.extend(eid for eid, ev in ctx.evidence.items.items()
+                           if ev.doc_id == doc.doc_id and ev.verified)
 
-    doc_types, keywords = _dim_doc_keywords(outcome.rule.dimension)
-    if not ids and keywords:
-        ids.extend(ctx.evidence.by_titles(keywords, limit=2))
-    if not ids and doc_types:
-        ids.extend(ctx.evidence.by_doc_types(doc_types, limit=2))
-
-    seen: set[str] = set()
-    outcome.evidence_ids = [i for i in ids if not (i in seen or seen.add(i))][:6]
-    if outcome.evidence_ids and outcome.status is RuleStatus.RISK:
+    outcome.evidence_ids = list(dict.fromkeys(ids))[:6]
+    if precise and outcome.status is RuleStatus.RISK:
         outcome.strength = EvidenceStrength.CONFIRMED
     elif outcome.evidence_ids:
         outcome.strength = EvidenceStrength.PARTIAL
+        outcome.to_verify.append("所附片段仅为相关资料，尚未逐项确认数值、报告期及完整判断依据")
     else:
         outcome.strength = EvidenceStrength.WEAK
+        if outcome.status in (RuleStatus.RISK, RuleStatus.WATCH):
+            outcome.to_verify.append("程序检测到候选信号，缺少与该结论对应的原文证据，需核实后使用")
 
 
 def run_rules(ctx: RuleContext, registry: RuleRegistry) -> EngineOutput:
@@ -169,7 +182,14 @@ def run_rules(ctx: RuleContext, registry: RuleRegistry) -> EngineOutput:
         attach_evidence(outcome, ctx)
         output.outcomes.append(outcome)
 
-        dim = rule.dimension.value
+    refresh_coverage(output)
+    return output
+
+
+def refresh_coverage(output: EngineOutput) -> None:
+    coverage = Coverage()
+    for outcome in output.outcomes:
+        dim = outcome.rule.dimension.value
         bucket = coverage.by_dimension.setdefault(
             dim, {"总数": 0, "已判断": 0, "数据不足": 0, "不适用": 0}
         )
@@ -186,7 +206,7 @@ def run_rules(ctx: RuleContext, registry: RuleRegistry) -> EngineOutput:
                 coverage.evaluated += 1
                 bucket["已判断"] += 1
     output.coverage = coverage
-    return output
+
 
 
 # --------------------------------------------------------------- AI 解读
@@ -245,14 +265,16 @@ def ai_interpret(output: EngineOutput, ctx: RuleContext, llm: LLMAdapter) -> Non
         o.ai_interpreted = True
         explanation = str(payload.get("explanation") or "").strip()
         if explanation:
-            o.why = explanation
-        if payload.get("mitigations"):
+            o.why += "\n模型补充解读：" + explanation
+        if isinstance(payload.get("mitigations"), list):
             o.mitigations = [str(m) for m in payload["mitigations"]][:4]
-        if payload.get("to_verify"):
-            o.to_verify = [str(v) for v in payload["to_verify"]][:4]
+        if isinstance(payload.get("to_verify"), list):
+            o.to_verify.extend(str(v) for v in payload["to_verify"][:4])
         still = payload.get("still_effective")
         if isinstance(still, bool):
             o.still_effective = still
+    if matched < len(targets):
+        llm.failures.append(f"AI 解读缺少 {len(targets) - matched}/{len(targets)} 项有效结果")
     output.ai_notes.append(
         f"AI 解读完成：{matched}/{len(targets)} 项异常获得模型解释（模型 {llm.config.model}）"
     )
@@ -267,7 +289,7 @@ def ai_verify(output: EngineOutput, ctx: RuleContext, llm: LLMAdapter) -> None:
         )
         return
 
-    targets = [o for o in output.outcomes if o.status is RuleStatus.RISK and o.evidence_ids]
+    targets = [o for o in output.outcomes if o.status is RuleStatus.RISK]
     if not targets:
         return
 
@@ -320,6 +342,7 @@ def ai_verify(output: EngineOutput, ctx: RuleContext, llm: LLMAdapter) -> None:
             outcome.status = RuleStatus.INSUFFICIENT
             outcome.strength = EvidenceStrength.WEAK
             downgraded += 1
+    refresh_coverage(output)
     output.ai_notes.append(
         f"独立核验完成：核验 {len(verdicts)} 条证据，{downgraded} 项结论被下调"
     )

@@ -78,30 +78,38 @@
 const q = document.getElementById('q');
 const box = document.getElementById('suggest');
 const msg = document.getElementById('msg');
-let timer = null, items = [], picked = '';
+let timer = null, items = [], picked = '', revision = 0;
 
 q.addEventListener('input', () => {
   clearTimeout(timer);
+  picked = '';
+  const requestRevision = ++revision;
   const v = q.value.trim();
   if (!v) { box.innerHTML = ''; return; }
   timer = setTimeout(async () => {
     const r = await fetch('/api/suggest?q=' + encodeURIComponent(v)).then(x => x.json()).catch(() => null);
+    if (requestRevision !== revision || q.value.trim() !== v) return;
     items = (r && r.items) || [];
     box.innerHTML = '';
     items.forEach((it, i) => {
       const div = document.createElement('div');
       div.className = 'suggest-item';
-      div.innerHTML = `<span><span class="nm">${it.name}</span>
-        <span class="cd">${it.secucode} · ${it.exchange} · ${it.match_reason}</span></span>
-        <span class="cd">${it.market === 'HK' ? '港股' : 'A股'}</span>`;
-      div.onclick = () => { picked = it.secucode; q.value = it.name + ' ' + it.secucode; box.innerHTML = ''; };
+      const label = document.createElement('span');
+      const name = document.createElement('span'); name.className = 'nm'; name.textContent = it.name;
+      const detail = document.createElement('span'); detail.className = 'cd';
+      detail.textContent = `${it.secucode} · ${it.exchange} · ${it.match_reason}`;
+      label.append(name, detail);
+      const market = document.createElement('span'); market.className = 'cd';
+      market.textContent = it.market === 'HK' ? '港股' : 'A股';
+      div.append(label, market);
+      div.onclick = () => { ++revision; clearTimeout(timer); picked = it.secucode; q.value = it.name + ' ' + it.secucode; box.innerHTML = ''; };
       box.appendChild(div);
     });
   }, 180);
 });
 
 document.querySelectorAll('.chip').forEach(c => {
-  c.onclick = () => { q.value = c.dataset.q; picked = c.dataset.q; box.innerHTML = ''; };
+  c.onclick = () => { ++revision; clearTimeout(timer); q.value = c.dataset.q; picked = c.dataset.q; box.innerHTML = ''; };
 });
 
 document.getElementById('scan').onclick = async () => {

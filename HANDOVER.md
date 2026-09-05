@@ -1,7 +1,9 @@
 # 交接报告：A 股 / 港股基本面排雷 Agent
 
-> 交接目的：提交给 Codex 做验收与代码审核。本文自包含项目全貌、关键设计决策、
-> 可执行的验收步骤与建议的审核重点。撰写时间：2026-09-05。
+> **2026-09-06 修复更新**：诊断 A01—A31 的程序修复已实施，规则版本 1.1。原有 58 项 + 验收回归 53 项 + 独立边界测试 36 项通过，共 147 项。完整变更、测试证据及限制见 [修复与回归记录](docs/FIX_REPORT_2026-09-06.md)。下文原有 2026-09-05 结果是历史记录；以本更新和修复记录为准。旧报告须重新扫描才会使用新规则。
+
+> 交接目的：供后续验收、代码审核和维护使用。本文自包含项目全貌、关键设计决策、
+> 可执行的验收步骤与建议的审核重点。初版撰写于 2026-09-05，当前状态更新于 2026-09-06。
 
 ---
 
@@ -45,7 +47,7 @@ SQLite `reports` 表存 payload 供在线页使用；在线页每请求用同一
 | 评分在渲染层计算 | 历史 JSON 无需迁移即可重渲染出新评分 | `render.py: risk_signal_score()` |
 | 分批调用 LLM | 思考模型推理计入 completion_tokens，整包提交会截断 JSON；单批失败只丢该批 | `app/llm/adapter.py: _run_batched` |
 | 渲染层 URL 白名单（仅 http/https） | 防 javascript: 等注入 | `render.py: safe_url()` |
-| SSRF 防护默认禁内网地址 | 数据源全是公网接口 | `app/core/httpx_client.py` |
+| SSRF 防护默认禁内网地址 | 数据源全是公网接口 | `app/core/http_client.py` |
 | 每主机 2 rps 限流 | 对公开数据源保持克制 | 同上 |
 
 ## 4. 本迭代（2026-09-05 晚）新增/变更清单
@@ -69,26 +71,32 @@ SQLite `reports` 表存 payload 供在线页使用；在线页每请求用同一
 # 环境：Python 3.12+；依赖：pip install -r requirements.txt
 # .env 已配置 GLM-5.3-Flash 密钥（本机）；无 .env 时全部功能仍可运行（AI 步骤跳过）
 
-# ① 单元测试（离线，约 1 秒）——预期：58 项全部 OK
+# ① 原有单元测试（离线）——预期：58 项全部 OK
 python tests/run_tests.py
 
-# ② 启动服务——预期：Uvicorn running on http://127.0.0.1:8770
+# ② 验收回归与独立边界测试（离线）——预期：89 项全部 OK
+python -m unittest discover -s tests -p 'test_*.py' -v
+
+# ③ 启动服务——预期：Uvicorn running on http://127.0.0.1:8770
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8770
 
-# ③ 健康检查——预期：{"ok":true,...,"llm_ready":true}
+# ④ 健康检查——预期：{"ok":true,...}
 curl -s http://127.0.0.1:8770/api/health
 
-# ④ 提交真实扫描（A 股约 30 秒 / 港股约 60 秒）
+# ⑤ 提交真实扫描
 curl -s -X POST http://127.0.0.1:8770/api/scan \
   -H 'Content-Type: application/json' -d '{"query":"600519"}'
 # 然后轮询 GET /api/tasks/{task_id} 直至 status=完成，再打开 /report/{task_id}
 
-# ⑤ 历史报告抽查（无需重新扫描，验证渲染层）
-open http://127.0.0.1:8770/report/6c688308a030    # 兆易创新 95A（AI 解读样本）
-open http://127.0.0.1:8770/report/7585f3ba3d68    # 万科 24E（高风险样本）
+# ⑥ 当前规则报告抽查
+open http://127.0.0.1:8770/report/66b1fafbfe97    # 腾讯，规则版本 1.1
 
-# ⑥ CLI 方式等价验证
+# ⑦ CLI 方式等价验证
 python scripts/run_scan.py 600519
+
+# ⑧ 停止后台服务；前台运行时直接按 Ctrl+C
+PID=$(lsof -tiTCP:8770 -sTCP:LISTEN)
+if [ -n "$PID" ]; then kill "$PID"; fi
 ```
 
 **报告验收要点**（对照 4 节结构）：
@@ -112,9 +120,9 @@ python scripts/run_scan.py 600519
 
 ## 7. 已知问题与限制（验收时不应视为缺陷）
 
-- "数据不足"检查项在报告中只有 01 节一句话汇总，无逐项清单（产品决策：简化报告）
+- "数据不足"检查项不进入主结论矩阵，在风险总览的折叠清单中完整列出
 - 历史报告 JSON 中部分 `security.name` 仍为代码（仅 603986 已补正；新生成的不受影响）
-- 20 家固定验证集回归未建立（当前 5 例人工样本）
+- 20 家固定验证集回归未建立（当前有 3 个规则 1.1 真实复验样本，另有旧版历史样本）
 - 历史风险跨年追溯未实现（12 个月公告窗口）
 - 数据源为公开网页接口，商用授权未确认；巨潮对高频抓取敏感（已限流 2 rps）
 - `data/publish/`（外部分享链接）为手工发布流程，未自动化
@@ -131,14 +139,16 @@ python scripts/run_scan.py 600519
 | `app/llm/adapter.py` | OpenAI 兼容适配 + 分批调用 + 预算控制 |
 | `app/report/` | render.py（上下文构建 + 评分）、charts.py（SVG）、templates/（唯一模板） |
 | `app/web/` | 首页/进度页/历史/管理的页面模板与静态资源 |
-| `tests/run_tests.py` | 58 项确定性测试（离线） |
+| `tests/run_tests.py` | 58 项原有确定性测试（离线） |
+| `tests/test_acceptance.py` | 53 项验收回归测试（离线） |
+| `tests/test_hardening.py` | 36 项独立边界与集成测试（离线） |
 | `docs/RULES.md` | 52 项规则完整参考（改规则必须同步更新） |
 | `DEVELOPMENT_STATUS.md` | 开发状态：已完成、误报修复、未实现清单、续接指引 |
 | `scripts/` | run_scan（CLI）、phase0_validate（数据源验证）、inspect_report（报告检查） |
 
 ## 9. 验收判定建议
 
-- **通过**：58 项测试全过 + ④ 或 ⑤ 至少一条链路跑通 + 报告验收要点全部满足
+- **通过**：147 项测试全过 + ⑤ 或 ⑥ 至少一条链路跑通 + 报告验收要点全部满足
   + 第 6 节审核重点无 P0 级发现
 - **有条件通过**：发现 P1（如某个边界条件错误但主流程正确）→ 列清单修复后复验
 - **不通过**：安全类问题（XSS/SSRF 绕过）、伪造证据/结论、模型参与数值计算

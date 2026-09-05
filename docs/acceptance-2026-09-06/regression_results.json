@@ -1,0 +1,580 @@
+{
+  "total_methods": 53,
+  "passed_methods": 7,
+  "failed_methods": 46,
+  "failure_assertions": 51,
+  "errors": 1,
+  "results": [
+    {
+      "test": "__main__.AuditChecks.test_01_fully_restricted_cash_is_zero",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_01_fully_restricted_cash_is_zero (__main__.AuditChecks.test_01_fully_restricted_cash_is_zero)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 83, in test_01_fully_restricted_cash_is_zero\n    self.assertEqual(ctx.metrics.get(\"cash_to_short_debt\"), 0.,\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                     \"全部现金受限时应为0，当前回退为账面现金，得到2倍\")\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 2.0 != 0.0 : 全部现金受限时应为0，当前回退为账面现金，得到2倍\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_02_missing_restricted_cash_not_normal",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_02_missing_restricted_cash_not_normal (__main__.AuditChecks.test_02_missing_restricted_cash_not_normal)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 89, in test_02_missing_restricted_cash_not_normal\n    self.assertEqual(o.status, RuleStatus.INSUFFICIENT, o.finding + \";\" + o.why)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <RuleStatus.NORMAL: '已覆盖资料中未发现明显异常'> != <RuleStatus.INSUFFICIENT: '数据不足，无法判断'> : 受限资金 —，占货币资金 0.00%;受限资金占比不高\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_03_negative_profit_positive_cash_not_inverted",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_03_negative_profit_positive_cash_not_inverted (__main__.AuditChecks.test_03_negative_profit_positive_cash_not_inverted)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 94, in test_03_negative_profit_positive_cash_not_inverted\n    self.assertNotIn(\"净利润为正而经营现金流为负\", o.why)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: '净利润为正而经营现金流为负' unexpectedly found in '净利润为正而经营现金流为负，利润缺乏现金支撑，是财务质量最常见的预警信号之一'\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_04_both_negative_not_healthy_profit_cover",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_04_both_negative_not_healthy_profit_cover (__main__.AuditChecks.test_04_both_negative_not_healthy_profit_cover)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 98, in test_04_both_negative_not_healthy_profit_cover\n    self.assertNotEqual(rule(\"FQ01\").evaluate(ctx).status, RuleStatus.NORMAL)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <RuleStatus.NORMAL: '已覆盖资料中未发现明显异常'> == <RuleStatus.NORMAL: '已覆盖资料中未发现明显异常'>\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_05_small_receivables_materiality",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_05_small_receivables_materiality (__main__.AuditChecks.test_05_small_receivables_materiality)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 107, in test_05_small_receivables_materiality\n    self.assertEqual(rule(\"FQ03\").evaluate(ctx).status,RuleStatus.NORMAL)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <RuleStatus.RISK: '发现风险'> != <RuleStatus.NORMAL: '已覆盖资料中未发现明显异常'>\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_06_audit_positive_signal_reaches_rule",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_06_audit_positive_signal_reaches_rule (__main__.AuditChecks.test_06_audit_positive_signal_reaches_rule)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 114, in test_06_audit_positive_signal_reaches_rule\n    self.assertEqual(o.status,RuleStatus.RISK,o.finding)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <RuleStatus.INSUFFICIENT: '数据不足，无法判断'> != <RuleStatus.RISK: '发现风险'> : 规则执行异常：AttributeError\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_07_traditional_audit_signal",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_07_traditional_audit_signal (__main__.AuditChecks.test_07_traditional_audit_signal)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 118, in test_07_traditional_audit_signal\n    self.assertTrue(scan_audit_opinions(p),\"港股繁体无法表示意见未识别\")\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: [] is not true : 港股繁体无法表示意见未识别\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_08_empty_pdf_not_normal_audit",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_08_empty_pdf_not_normal_audit (__main__.AuditChecks.test_08_empty_pdf_not_normal_audit)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 123, in test_08_empty_pdf_not_normal_audit\n    self.assertEqual(rule(\"OP02\").evaluate(context(docs=[d],parsed={d.doc_id:p})).status,\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                     RuleStatus.INSUFFICIENT)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <RuleStatus.NORMAL: '已覆盖资料中未发现明显异常'> != <RuleStatus.INSUFFICIENT: '数据不足，无法判断'>\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_09_prefix_only_quote_must_fail",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_09_prefix_only_quote_must_fail (__main__.AuditChecks.test_09_prefix_only_quote_must_fail)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 131, in test_09_prefix_only_quote_must_fail\n    self.assertFalse(ev.verified,\"前40字匹配即通过，伪造后半段与错误指纹均被接受\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false : 前40字匹配即通过，伪造后半段与错误指纹均被接受\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_10_same_page_topic_evidence_not_overwritten",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_10_same_page_topic_evidence_not_overwritten (__main__.AuditChecks.test_10_same_page_topic_evidence_not_overwritten)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 139, in test_10_same_page_topic_evidence_not_overwritten\n    self.assertIn(\"应收账款\",st.get(aid).quote)\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: '应收账款' not found in '甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲存货乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙'\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_11_precise_evidence_reverify_by_doc_id",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_11_precise_evidence_reverify_by_doc_id (__main__.AuditChecks.test_11_precise_evidence_reverify_by_doc_id)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 146, in test_11_precise_evidence_reverify_by_doc_id\n    try: self.assertEqual(pipe._reverify_evidence(st,{\"doc1\":p}),1)\n         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 0 != 1\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_12_unrelated_quote_not_confirmed_risk",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_12_unrelated_quote_not_confirmed_risk (__main__.AuditChecks.test_12_unrelated_quote_not_confirmed_risk)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 153, in test_12_unrelated_quote_not_confirmed_risk\n    self.assertNotEqual(o.strength,EvidenceStrength.CONFIRMED)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <EvidenceStrength.CONFIRMED: '原始披露确认'> == <EvidenceStrength.CONFIRMED: '原始披露确认'>\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_13_cninfo_classification_preserves_risk",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_13_cninfo_classification_preserves_risk (__main__.AuditChecks.test_13_cninfo_classification_preserves_risk) (title='关于2025年年度报告的更正公告')",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 160, in test_13_cninfo_classification_preserves_risk\n    with self.subTest(title=title): self.assertEqual(_classify(title),expected)\n                                    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: '年报' != '财务更正'\n- 年报\n+ 财务更正\n\n"
+        },
+        {
+          "kind": "failure",
+          "case": "test_13_cninfo_classification_preserves_risk (__main__.AuditChecks.test_13_cninfo_classification_preserves_risk) (title='关于2025年年度报告的问询函')",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 160, in test_13_cninfo_classification_preserves_risk\n    with self.subTest(title=title): self.assertEqual(_classify(title),expected)\n                                    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: '年报' != '监管问询'\n- 年报\n+ 监管问询\n\n"
+        },
+        {
+          "kind": "failure",
+          "case": "test_13_cninfo_classification_preserves_risk (__main__.AuditChecks.test_13_cninfo_classification_preserves_risk) (title='关于聘任会计师事务所的公告')",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 160, in test_13_cninfo_classification_preserves_risk\n    with self.subTest(title=title): self.assertEqual(_classify(title),expected)\n                                    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: '高管变动' != '审计机构'\n- 高管变动\n+ 审计机构\n\n"
+        },
+        {
+          "kind": "failure",
+          "case": "test_13_cninfo_classification_preserves_risk (__main__.AuditChecks.test_13_cninfo_classification_preserves_risk) (title='2026年半年度业绩预告')",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 160, in test_13_cninfo_classification_preserves_risk\n    with self.subTest(title=title): self.assertEqual(_classify(title),expected)\n                                    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: '其他公告' != '业绩预告'\n- 其他公告\n+ 业绩预告\n\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_14_hk_warning_not_swallowed_by_results",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_14_hk_warning_not_swallowed_by_results (__main__.AuditChecks.test_14_hk_warning_not_swallowed_by_results)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 163, in test_14_hk_warning_not_swallowed_by_results\n    self.assertEqual(_classify_hk(\"盈利警告 - 預期年度業績錄得虧損\",\"\"),\"盈利警告\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: '业绩' != '盈利警告'\n- 业绩\n+ 盈利警告\n\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_15_resolved_freeze_not_current_high_risk",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_15_resolved_freeze_not_current_high_risk (__main__.AuditChecks.test_15_resolved_freeze_not_current_high_risk)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 168, in test_15_resolved_freeze_not_current_high_risk\n    self.assertNotEqual(o.status,RuleStatus.RISK,o.finding)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <RuleStatus.RISK: '发现风险'> == <RuleStatus.RISK: '发现风险'> : 检索到 1 份资产冻结相关公告：关于公司全部资产解除冻结的公告\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_16_missing_previous_year_not_yoy",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_16_missing_previous_year_not_yoy (__main__.AuditChecks.test_16_missing_previous_year_not_yoy)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 173, in test_16_missing_previous_year_not_yoy\n    self.assertIsNone(compute_metrics(fs).get(\"revenue_yoy\"))\n    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 1.0 is not None\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_17_currency_mismatch_not_compared",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_17_currency_mismatch_not_compared (__main__.AuditChecks.test_17_currency_mismatch_not_compared)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 178, in test_17_currency_mismatch_not_compared\n    self.assertIsNone(compute_metrics(fs).get(\"revenue_yoy\"))\n    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 1.0 is not None\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_18_five_complete_years_plus_latest",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_18_five_complete_years_plus_latest (__main__.AuditChecks.test_18_five_complete_years_plus_latest)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 183, in test_18_five_complete_years_plus_latest\n    self.assertEqual(len(_limit_years(fs,5)),6)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 5 != 6\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_19_fact_identity_retains_scope",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_19_fact_identity_retains_scope (__main__.AuditChecks.test_19_fact_identity_retains_scope)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 189, in test_19_fact_identity_retains_scope\n    self.assertEqual(fs.value(\"revenue\",\"2026-06-30\"),100.,\"母公司覆盖合并数据\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 20.0 != 100.0 : 母公司覆盖合并数据\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_20_hk_percentage_normalized_to_ratio",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_20_hk_percentage_normalized_to_ratio (__main__.AuditChecks.test_20_hk_percentage_normalized_to_ratio)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 196, in test_20_hk_percentage_normalized_to_ratio\n    self.assertAlmostEqual(compute_metrics(fs).get(\"roe_avg\"),.09966353785254)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 9.966353785254 != 0.09966353785254 within 7 places (9.86669024740146 difference)\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_21_missing_goodwill_denominator_not_normal",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_21_missing_goodwill_denominator_not_normal (__main__.AuditChecks.test_21_missing_goodwill_denominator_not_normal)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 200, in test_21_missing_goodwill_denominator_not_normal\n    self.assertEqual(o.status,RuleStatus.INSUFFICIENT,o.finding)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <RuleStatus.NORMAL: '已覆盖资料中未发现明显异常'> != <RuleStatus.INSUFFICIENT: '数据不足，无法判断'> : 商誉 0.00 亿元，占总资产 —\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_22_missing_advance_not_treated_as_zero",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_22_missing_advance_not_treated_as_zero (__main__.AuditChecks.test_22_missing_advance_not_treated_as_zero)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 204, in test_22_missing_advance_not_treated_as_zero\n    self.assertEqual(rule(\"RE01\").evaluate(context(vals,pack=\"realestate\")).status,RuleStatus.INSUFFICIENT)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <RuleStatus.RISK: '发现风险'> != <RuleStatus.INSUFFICIENT: '数据不足，无法判断'>\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_23_ssrf_redirect_revalidated",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_23_ssrf_redirect_revalidated (__main__.AuditChecks.test_23_ssrf_redirect_revalidated)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 217, in test_23_ssrf_redirect_revalidated\n    self.assertFalse(any(\"127.0.0.1\" in u for u in visited),str(visited))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false : ['http://public.test/start', 'http://127.0.0.1/private']\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_24_ipv6_mapped_loopback_rejected",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_24_ipv6_mapped_loopback_rejected (__main__.AuditChecks.test_24_ipv6_mapped_loopback_rejected)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 221, in test_24_ipv6_mapped_loopback_rejected\n    with self.assertRaises(FetchError): assert_safe_url(\"http://[::ffff:127.0.0.1]/\")\n         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^\nAssertionError: FetchError not raised\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_25_template_really_strict",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_25_template_really_strict (__main__.AuditChecks.test_25_template_really_strict)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 224, in test_25_template_really_strict\n    self.assertIs(_env().undefined,StrictUndefined)\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <class 'jinja2.runtime.Undefined'> is not <class 'jinja2.runtime.StrictUndefined'>\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_26_report_displays_actual_gap",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_26_report_displays_actual_gap (__main__.AuditChecks.test_26_report_displays_actual_gap)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 228, in test_26_report_displays_actual_gap\n    self.assertIn(\"AUDIT_GAP_最新年报下载失败\",render_inline(p))\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'AUDIT_GAP_最新年报下载失败' not found in '<!DOCTYPE html>\\n<html lang=\"zh-CN\">\\n<head>\\n<meta charset=\"utf-8\">\\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\\n<title>贵州茅台（600519.SH）排雷报告</title>\\n<style>\\n:root{\\n  --bg:#f8f9fa; --card:#ffffff; --line:#e5e7eb; --text:#1f2937; --muted:#6b7280;\\n  --faint:#94a3b8; --primary:#2563eb; --risk:#dc2626; --watch:#d97706;\\n  --ok:#16a34a; --info:#475569;\\n}\\n*{box-sizing:border-box}\\nbody{margin:0;background:var(--bg);color:var(--text);\\n  font-family:-apple-system,BlinkMacSystemFont,\"PingFang SC\",\"Microsoft YaHei\",\\'Helvetica Neue\\',Arial,sans-serif;\\n  line-height:1.7;font-size:15px;}\\n.wrap{max-width:960px;margin:0 auto;padding:24px 18px 64px}\\nheader.hero{background:var(--card);border-radius:16px;padding:24px 26px;\\n  box-shadow:0 1px 3px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.04);margin-bottom:18px}\\n.eyebrow{color:var(--faint);font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}\\nh1{margin:0 0 6px;font-size:26px;line-height:1.35;font-weight:700}\\n.sub{color:var(--muted);font-size:14px}\\n.meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}\\n.meta div{font-size:13px;color:var(--muted)}\\n.meta b{display:block;color:var(--text);font-size:14px;font-weight:600;margin-top:2px}\\nsection{background:var(--card);border-radius:14px;padding:22px 26px;margin-bottom:16px;\\n  box-shadow:0 1px 2px rgba(15,23,42,.05)}\\n/* 大栏目：淡蓝色带 + 蓝色左标条；小栏目：浅灰带 + 细蓝左标条 */\\nsection h2{margin:0 0 14px;padding:10px 16px;background:#eff6ff;color:#1e3a8a;\\n  border-left:4px solid #2563eb;border-radius:0 8px 8px 0;font-size:17px;font-weight:700;\\n  display:flex;align-items:baseline}\\nsection h2 .idx{color:#2563eb;font-weight:650;margin-right:8px;font-variant-numeric:tabular-nums}\\nsection h3{margin:14px 0 8px;padding:5px 12px;background:#f1f5f9;color:#334155;\\n  border-left:3px solid #93c5fd;border-radius:0 6px 6px 0;font-size:14px;font-weight:600;\\n  display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}\\nsection h3 span{color:var(--muted);font-weight:400;font-size:12.5px}\\n.hint{color:var(--muted);font-size:13px;margin:0 0 16px}\\n/* 02 矩阵\"说明\"列：长说明折叠 */\\n.cell-fold{margin:4px 0 0}\\n.cell-fold>summary{font-size:12px;cursor:pointer}\\n.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;\\n  font-weight:600;line-height:1.7;white-space:nowrap}\\n.badge.risk{background:#fee2e2;color:#991b1b}\\n.badge.watch{background:#fef3c7;color:#92400e}\\n.badge.normal{background:#dcfce7;color:#166534}\\n.badge.insufficient{background:#e5e7eb;color:#4b5563}\\n.badge.na{background:#f1f5f9;color:#64748b}\\n.sev-high{color:#991b1b}.sev-mid{color:#92400e}.sev-low{color:#1d4ed8}.sev-unknown{color:#6b7280}\\ntable{width:100%;border-collapse:collapse;font-size:13.5px}\\nth,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}\\nth{color:var(--muted);font-weight:600;font-size:12.5px;background:#f8fafc}\\ntd.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}\\n.finding{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}\\n.finding.risk{border-left:4px solid var(--risk)}\\n.finding.watch{border-left:4px solid var(--watch)}\\n.finding.normal{border-left:4px solid var(--ok)}\\n.finding.insufficient{border-left:4px solid var(--faint)}\\n.finding.na{border-left:4px solid #cbd5e1}\\n.finding h4{margin:0 0 8px;font-size:15px;font-weight:650}\\n.finding .row{margin:6px 0;font-size:13.5px}\\n.finding .label{color:var(--muted);font-weight:600;margin-right:6px}\\n.quote{background:#f8fafc;border-left:3px solid var(--primary);padding:10px 12px;margin:8px 0;\\n  font-size:13px;color:var(--info);white-space:pre-wrap;word-break:break-word;border-radius:0 6px 6px 0}\\nul{margin:6px 0;padding-left:20px}\\nli{margin:4px 0;font-size:13.5px}\\ndetails{margin-top:10px}\\nsummary{cursor:pointer;font-size:13px;color:var(--primary);font-weight:600;outline:none}\\nfooter{color:var(--faint);font-size:12px;text-align:center;padding:26px 12px}\\na{color:var(--primary);text-decoration:none;word-break:break-all}\\na:hover{text-decoration:underline}\\n.warn{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;\\n  font-size:13px;color:#92400e;margin-bottom:12px}\\n.info{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;\\n  font-size:13px;color:#1e40af;margin-bottom:12px}\\n.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}\\n.score-box{display:flex;align-items:center;gap:20px;flex-wrap:wrap;border:1px solid var(--line);\\n  border-radius:12px;padding:16px 20px;margin:0 0 12px;background:#f8fafc}\\n.score-main{display:flex;align-items:center;gap:12px}\\n.score-num{font-size:44px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}\\n.score-grade{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;\\n  border-radius:10px;font-size:20px;font-weight:700;color:#fff}\\n.score-grade.g-a{background:#16a34a}.score-grade.g-b{background:#2563eb}\\n.score-grade.g-c{background:#d97706}.score-grade.g-d{background:#ea580c}\\n.score-grade.g-e{background:#dc2626}\\n.score-side{flex:1;min-width:240px}\\n.score-label{font-weight:600;font-size:14.5px}\\n.score-comp{color:var(--muted);font-size:13px;margin-top:3px;line-height:1.6}\\n.score-note{color:var(--faint);font-size:12px;margin:6px 0 14px}\\n.tag{display:inline-block;background:#f1f5f9;color:#475569;border-radius:6px;\\n  padding:1px 7px;font-size:12px;margin-right:6px}\\n.toc{list-style:none;padding:0;margin:0}\\n.toc li{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid #f1f5f9;margin:0}\\n.toc li:last-child{border-bottom:none}\\n.toc .no{color:var(--faint);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums;min-width:22px}\\n.toc a{color:var(--text);font-weight:600;font-size:14px;text-decoration:none}\\n.toc a:hover{color:var(--primary);text-decoration:underline}\\n.toc .desc{color:var(--muted);font-size:12.5px}\\nsection{scroll-margin-top:16px}\\n@media (max-width:640px){\\n  .wrap{padding:14px 12px 48px}\\n  section{padding:18px 16px}\\n  header.hero{padding:18px 16px}\\n  h1{font-size:21px}\\n  table{font-size:12.5px}\\n  th,td{padding:7px 6px}\\n  section h2{padding:8px 12px;font-size:15.5px}\\n  section h3{padding:4px 10px;font-size:13px}\\n}\\n@media print{\\n  body{background:#fff}\\n  section,header.hero{box-shadow:none;border:1px solid #e5e7eb;page-break-inside:avoid}\\n  details{display:block}\\n  details summary{display:none}\\n}\\n</style>\\n</head>\\n<body>\\n<div class=\"wrap\">\\n\\n<header class=\"hero\">\\n  <div class=\"eyebrow\">A 股 / 港股基本面排雷报告</div>\\n  <h1>贵州茅台（600519.SH）排雷报告</h1>\\n  <div class=\"sub\">\\n    上海证券交易所 · 白酒 · 报表币种 CNY  </div>\\n  <div class=\"sub\" style=\"margin-top:4px\">\\n    数据基础：x~y公告 10 条 ·\\n    原文 3 份 · 证据 5 条\\n    （5 条通过原文复核）\\n  </div>\\n  <div class=\"meta\">\\n    <div>扫描时间<b>2026-09-05</b></div>\\n    <div>最新财报期<b>2026年中报</b></div>\\n  </div>\\n</header>\\n\\n<section>\\n  <h2>报告目录</h2>\\n  <ul class=\"toc\">\\n    <li><span class=\"no\">01</span><a href=\"#sec-01\">风险总览</a><span class=\"desc\">这家公司风险有多大、扣了多少分、最严重的几条问题</span></li>\\n    <li><span class=\"no\">02</span><a href=\"#sec-02\">逐项检查结果</a><span class=\"desc\">财务、偿债、治理、监管、经营 5 个角度的逐条结论</span></li>\\n    <li><span class=\"no\">03</span><a href=\"#sec-03\">问题详情与原文</a><span class=\"desc\">每条结论的详细理由和公告原文（默认折叠）</span></li>\\n    <li><span class=\"no\">04</span><a href=\"#sec-04\">数据来源与算法</a><span class=\"desc\">数据从哪来、怎么算的、有什么局限</span></li>\\n  </ul>\\n</section>\\n\\n<section id=\"sec-01\">\\n  <h2><span class=\"idx\">01</span>风险总览</h2>\\n  <p class=\"hint\">最重要的结论一页速览；点击检查项名称跳转到第 03 节查看完整证据链。</p>\\n\\n  <div class=\"score-box\">\\n    <div class=\"score-main\">\\n      <span class=\"score-num\">100</span>\\n      <span class=\"score-grade g-a\">A</span>\\n    </div>\\n    <div class=\"score-side\">\\n      <div class=\"score-label\">风险信号评分 · 未发现明显风险信号</div>\\n      <div class=\"score-comp\">\\n        基础分 100 · 发现风险 −0（无）\\n        · 需要关注 −0（无）\\n      </div>\\n    </div>\\n  </div>\\n  <p class=\"score-note\">评分为检查项扣分加权汇总，反映风险信号密度，不代表投资价值或违约概率。</p>\\n\\n  <div class=\"warn\">\\n    本次在已获取资料范围内发现 <b>1</b> 项风险、\\n    <b>0</b> 项需关注事项，\\n    另有 <b>1</b> 项因数据不足无法判断。\\n    最高风险等级：<b>高</b>。\\n  </div>\\n\\n</section>\\n\\n<section id=\"sec-02\">\\n  <h2><span class=\"idx\">02</span>逐项检查结果</h2>\\n  <p class=\"hint\">仅列出已形成判断的检查项；\"不适用\"项已省略。</p>\\n</section>\\n\\n<section id=\"sec-03\">\\n  <h2><span class=\"idx\">03</span>问题详情与原文</h2>\\n  <p class=\"hint\">每条结论按“发现了什么 → 为什么值得关注 → 证据 → 当前是否存在 → 缓解因素 → 还需核实”组织；原始证据默认折叠，点击展开。</p>\\n</section>\\n\\n<section id=\"sec-04\">\\n  <h2><span class=\"idx\">04</span>数据来源与算法</h2>\\n  <p class=\"hint\">\\n    AI 解读：未启用——未配置，结论解释为规则模板文案。\\n    计算口径：年报、中报、三季报为年初至期末的<b>累计</b>口径，同比只与同口径上期比较；\\n    受限资金已从\"可自由使用现金\"中扣除；利润为负时不套用普通同比解释。\\n  </p>\\n  <p class=\"hint\">本报告不构成投资建议</p>\\n</section>\\n\\n<footer>\\n  报告 ID testtask · 生成于 2026-09-06T00:32:03 · 报告版本 v1.0 · 规则版本 v1.0<br>\\n  本报告由程序计算指标、模型解释异常，所有结论均绑定具体披露文件，不构成投资建议。\\n</footer>\\n\\n</div>\\n<script>\\n// 打印时自动展开全部折叠区（原文证据），打印后恢复原状。\\n// 锚点跳转（如检查矩阵的\"N 条\"链接）时自动展开目标所在的折叠区。内联脚本，无外部依赖。\\n(function(){\\n  function openAll(){document.querySelectorAll(\\'details\\').forEach(function(d){if(!d.open){d.setAttribute(\\'data-was-closed\\',\\'\\');d.open=true}})}\\n  function restore(){document.querySelectorAll(\\'details[data-was-closed]\\').forEach(function(d){d.open=false;d.removeAttribute(\\'data-was-closed\\')})}\\n  window.addEventListener(\\'beforeprint\\',openAll);\\n  window.addEventListener(\\'afterprint\\',restore);\\n  function openHashTarget(){var t=document.getElementById(location.hash.slice(1));while(t){if(t.tagName===\\'DETAILS\\'){t.open=true}t=t.parentElement}}\\n  window.addEventListener(\\'hashchange\\',openHashTarget);\\n  openHashTarget();\\n})();\\n</script>\\n</body>\\n</html>'\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_27_zero_coverage_not_reassuring",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_27_zero_coverage_not_reassuring (__main__.AuditChecks.test_27_zero_coverage_not_reassuring)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 235, in test_27_zero_coverage_not_reassuring\n    self.assertNotIn(\"风险信号评分 · 未发现明显风险信号\",html)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: '风险信号评分 · 未发现明显风险信号' unexpectedly found in '<!DOCTYPE html>\\n<html lang=\"zh-CN\">\\n<head>\\n<meta charset=\"utf-8\">\\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\\n<title>贵州茅台（600519.SH）排雷报告</title>\\n<style>\\n:root{\\n  --bg:#f8f9fa; --card:#ffffff; --line:#e5e7eb; --text:#1f2937; --muted:#6b7280;\\n  --faint:#94a3b8; --primary:#2563eb; --risk:#dc2626; --watch:#d97706;\\n  --ok:#16a34a; --info:#475569;\\n}\\n*{box-sizing:border-box}\\nbody{margin:0;background:var(--bg);color:var(--text);\\n  font-family:-apple-system,BlinkMacSystemFont,\"PingFang SC\",\"Microsoft YaHei\",\\'Helvetica Neue\\',Arial,sans-serif;\\n  line-height:1.7;font-size:15px;}\\n.wrap{max-width:960px;margin:0 auto;padding:24px 18px 64px}\\nheader.hero{background:var(--card);border-radius:16px;padding:24px 26px;\\n  box-shadow:0 1px 3px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.04);margin-bottom:18px}\\n.eyebrow{color:var(--faint);font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}\\nh1{margin:0 0 6px;font-size:26px;line-height:1.35;font-weight:700}\\n.sub{color:var(--muted);font-size:14px}\\n.meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}\\n.meta div{font-size:13px;color:var(--muted)}\\n.meta b{display:block;color:var(--text);font-size:14px;font-weight:600;margin-top:2px}\\nsection{background:var(--card);border-radius:14px;padding:22px 26px;margin-bottom:16px;\\n  box-shadow:0 1px 2px rgba(15,23,42,.05)}\\n/* 大栏目：淡蓝色带 + 蓝色左标条；小栏目：浅灰带 + 细蓝左标条 */\\nsection h2{margin:0 0 14px;padding:10px 16px;background:#eff6ff;color:#1e3a8a;\\n  border-left:4px solid #2563eb;border-radius:0 8px 8px 0;font-size:17px;font-weight:700;\\n  display:flex;align-items:baseline}\\nsection h2 .idx{color:#2563eb;font-weight:650;margin-right:8px;font-variant-numeric:tabular-nums}\\nsection h3{margin:14px 0 8px;padding:5px 12px;background:#f1f5f9;color:#334155;\\n  border-left:3px solid #93c5fd;border-radius:0 6px 6px 0;font-size:14px;font-weight:600;\\n  display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}\\nsection h3 span{color:var(--muted);font-weight:400;font-size:12.5px}\\n.hint{color:var(--muted);font-size:13px;margin:0 0 16px}\\n/* 02 矩阵\"说明\"列：长说明折叠 */\\n.cell-fold{margin:4px 0 0}\\n.cell-fold>summary{font-size:12px;cursor:pointer}\\n.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;\\n  font-weight:600;line-height:1.7;white-space:nowrap}\\n.badge.risk{background:#fee2e2;color:#991b1b}\\n.badge.watch{background:#fef3c7;color:#92400e}\\n.badge.normal{background:#dcfce7;color:#166534}\\n.badge.insufficient{background:#e5e7eb;color:#4b5563}\\n.badge.na{background:#f1f5f9;color:#64748b}\\n.sev-high{color:#991b1b}.sev-mid{color:#92400e}.sev-low{color:#1d4ed8}.sev-unknown{color:#6b7280}\\ntable{width:100%;border-collapse:collapse;font-size:13.5px}\\nth,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}\\nth{color:var(--muted);font-weight:600;font-size:12.5px;background:#f8fafc}\\ntd.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}\\n.finding{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}\\n.finding.risk{border-left:4px solid var(--risk)}\\n.finding.watch{border-left:4px solid var(--watch)}\\n.finding.normal{border-left:4px solid var(--ok)}\\n.finding.insufficient{border-left:4px solid var(--faint)}\\n.finding.na{border-left:4px solid #cbd5e1}\\n.finding h4{margin:0 0 8px;font-size:15px;font-weight:650}\\n.finding .row{margin:6px 0;font-size:13.5px}\\n.finding .label{color:var(--muted);font-weight:600;margin-right:6px}\\n.quote{background:#f8fafc;border-left:3px solid var(--primary);padding:10px 12px;margin:8px 0;\\n  font-size:13px;color:var(--info);white-space:pre-wrap;word-break:break-word;border-radius:0 6px 6px 0}\\nul{margin:6px 0;padding-left:20px}\\nli{margin:4px 0;font-size:13.5px}\\ndetails{margin-top:10px}\\nsummary{cursor:pointer;font-size:13px;color:var(--primary);font-weight:600;outline:none}\\nfooter{color:var(--faint);font-size:12px;text-align:center;padding:26px 12px}\\na{color:var(--primary);text-decoration:none;word-break:break-all}\\na:hover{text-decoration:underline}\\n.warn{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;\\n  font-size:13px;color:#92400e;margin-bottom:12px}\\n.info{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;\\n  font-size:13px;color:#1e40af;margin-bottom:12px}\\n.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}\\n.score-box{display:flex;align-items:center;gap:20px;flex-wrap:wrap;border:1px solid var(--line);\\n  border-radius:12px;padding:16px 20px;margin:0 0 12px;background:#f8fafc}\\n.score-main{display:flex;align-items:center;gap:12px}\\n.score-num{font-size:44px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}\\n.score-grade{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;\\n  border-radius:10px;font-size:20px;font-weight:700;color:#fff}\\n.score-grade.g-a{background:#16a34a}.score-grade.g-b{background:#2563eb}\\n.score-grade.g-c{background:#d97706}.score-grade.g-d{background:#ea580c}\\n.score-grade.g-e{background:#dc2626}\\n.score-side{flex:1;min-width:240px}\\n.score-label{font-weight:600;font-size:14.5px}\\n.score-comp{color:var(--muted);font-size:13px;margin-top:3px;line-height:1.6}\\n.score-note{color:var(--faint);font-size:12px;margin:6px 0 14px}\\n.tag{display:inline-block;background:#f1f5f9;color:#475569;border-radius:6px;\\n  padding:1px 7px;font-size:12px;margin-right:6px}\\n.toc{list-style:none;padding:0;margin:0}\\n.toc li{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid #f1f5f9;margin:0}\\n.toc li:last-child{border-bottom:none}\\n.toc .no{color:var(--faint);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums;min-width:22px}\\n.toc a{color:var(--text);font-weight:600;font-size:14px;text-decoration:none}\\n.toc a:hover{color:var(--primary);text-decoration:underline}\\n.toc .desc{color:var(--muted);font-size:12.5px}\\nsection{scroll-margin-top:16px}\\n@media (max-width:640px){\\n  .wrap{padding:14px 12px 48px}\\n  section{padding:18px 16px}\\n  header.hero{padding:18px 16px}\\n  h1{font-size:21px}\\n  table{font-size:12.5px}\\n  th,td{padding:7px 6px}\\n  section h2{padding:8px 12px;font-size:15.5px}\\n  section h3{padding:4px 10px;font-size:13px}\\n}\\n@media print{\\n  body{background:#fff}\\n  section,header.hero{box-shadow:none;border:1px solid #e5e7eb;page-break-inside:avoid}\\n  details{display:block}\\n  details summary{display:none}\\n}\\n</style>\\n</head>\\n<body>\\n<div class=\"wrap\">\\n\\n<header class=\"hero\">\\n  <div class=\"eyebrow\">A 股 / 港股基本面排雷报告</div>\\n  <h1>贵州茅台（600519.SH）排雷报告</h1>\\n  <div class=\"sub\">\\n    上海证券交易所 · 白酒 · 报表币种 CNY  </div>\\n  <div class=\"sub\" style=\"margin-top:4px\">\\n    数据基础：x~y公告 10 条 ·\\n    原文 3 份 · 证据 5 条\\n    （5 条通过原文复核）\\n  </div>\\n  <div class=\"meta\">\\n    <div>扫描时间<b>2026-09-05</b></div>\\n    <div>最新财报期<b>2026年中报</b></div>\\n  </div>\\n</header>\\n\\n<section>\\n  <h2>报告目录</h2>\\n  <ul class=\"toc\">\\n    <li><span class=\"no\">01</span><a href=\"#sec-01\">风险总览</a><span class=\"desc\">这家公司风险有多大、扣了多少分、最严重的几条问题</span></li>\\n    <li><span class=\"no\">02</span><a href=\"#sec-02\">逐项检查结果</a><span class=\"desc\">财务、偿债、治理、监管、经营 5 个角度的逐条结论</span></li>\\n    <li><span class=\"no\">03</span><a href=\"#sec-03\">问题详情与原文</a><span class=\"desc\">每条结论的详细理由和公告原文（默认折叠）</span></li>\\n    <li><span class=\"no\">04</span><a href=\"#sec-04\">数据来源与算法</a><span class=\"desc\">数据从哪来、怎么算的、有什么局限</span></li>\\n  </ul>\\n</section>\\n\\n<section id=\"sec-01\">\\n  <h2><span class=\"idx\">01</span>风险总览</h2>\\n  <p class=\"hint\">最重要的结论一页速览；点击检查项名称跳转到第 03 节查看完整证据链。</p>\\n\\n  <div class=\"score-box\">\\n    <div class=\"score-main\">\\n      <span class=\"score-num\">100</span>\\n      <span class=\"score-grade g-a\">A</span>\\n    </div>\\n    <div class=\"score-side\">\\n      <div class=\"score-label\">风险信号评分 · 未发现明显风险信号</div>\\n      <div class=\"score-comp\">\\n        基础分 100 · 发现风险 −0（无）\\n        · 需要关注 −0（无）\\n      </div>\\n    </div>\\n  </div>\\n  <p class=\"score-note\">评分为检查项扣分加权汇总，反映风险信号密度，不代表投资价值或违约概率。</p>\\n\\n  <div class=\"info\">\\n    本次未触发风险或关注级别的检查项。请注意：这<b>不等于</b>该公司不存在风险，\\n    结论仅在已覆盖资料范围内成立。\\n  </div>\\n\\n</section>\\n\\n<section id=\"sec-02\">\\n  <h2><span class=\"idx\">02</span>逐项检查结果</h2>\\n  <p class=\"hint\">仅列出已形成判断的检查项；\"不适用\"项已省略。</p>\\n</section>\\n\\n<section id=\"sec-03\">\\n  <h2><span class=\"idx\">03</span>问题详情与原文</h2>\\n  <p class=\"hint\">每条结论按“发现了什么 → 为什么值得关注 → 证据 → 当前是否存在 → 缓解因素 → 还需核实”组织；原始证据默认折叠，点击展开。</p>\\n</section>\\n\\n<section id=\"sec-04\">\\n  <h2><span class=\"idx\">04</span>数据来源与算法</h2>\\n  <p class=\"hint\">\\n    AI 解读：未启用——未配置，结论解释为规则模板文案。\\n    计算口径：年报、中报、三季报为年初至期末的<b>累计</b>口径，同比只与同口径上期比较；\\n    受限资金已从\"可自由使用现金\"中扣除；利润为负时不套用普通同比解释。\\n  </p>\\n  <p class=\"hint\">本报告不构成投资建议</p>\\n</section>\\n\\n<footer>\\n  报告 ID testtask · 生成于 2026-09-06T00:32:03 · 报告版本 v1.0 · 规则版本 v1.0<br>\\n  本报告由程序计算指标、模型解释异常，所有结论均绑定具体披露文件，不构成投资建议。\\n</footer>\\n\\n</div>\\n<script>\\n// 打印时自动展开全部折叠区（原文证据），打印后恢复原状。\\n// 锚点跳转（如检查矩阵的\"N 条\"链接）时自动展开目标所在的折叠区。内联脚本，无外部依赖。\\n(function(){\\n  function openAll(){document.querySelectorAll(\\'details\\').forEach(function(d){if(!d.open){d.setAttribute(\\'data-was-closed\\',\\'\\');d.open=true}})}\\n  function restore(){document.querySelectorAll(\\'details[data-was-closed]\\').forEach(function(d){d.open=false;d.removeAttribute(\\'data-was-closed\\')})}\\n  window.addEventListener(\\'beforeprint\\',openAll);\\n  window.addEventListener(\\'afterprint\\',restore);\\n  function openHashTarget(){var t=document.getElementById(location.hash.slice(1));while(t){if(t.tagName===\\'DETAILS\\'){t.open=true}t=t.parentElement}}\\n  window.addEventListener(\\'hashchange\\',openHashTarget);\\n  openHashTarget();\\n})();\\n</script>\\n</body>\\n</html>'\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_28_llm_enabled_switch",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_28_llm_enabled_switch (__main__.AuditChecks.test_28_llm_enabled_switch)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 239, in test_28_llm_enabled_switch\n    self.assertFalse(LLMAdapter(LLMConfig(enabled=False,api_key=\"fixture\")).available)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_29_llm_budget_partial_failure_visible",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_29_llm_budget_partial_failure_visible (__main__.AuditChecks.test_29_llm_budget_partial_failure_visible)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 249, in test_29_llm_budget_partial_failure_visible\n    self.assertTrue(llm.failures or r.error or r.skipped_reason,\"预算导致第2批取消但无任何失败说明\")\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: '' is not true : 预算导致第2批取消但无任何失败说明\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_30_network_disable_is_honored",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_30_network_disable_is_honored (__main__.AuditChecks.test_30_network_disable_is_honored)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 259, in test_30_network_disable_is_honored\n    self.assertEqual(visited,[])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^\nAssertionError: Lists differ: ['https://example.org/'] != []\n\nFirst list contains 1 additional elements.\nFirst extra element 0:\n'https://example.org/'\n\n- ['https://example.org/']\n+ []\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_31_llm_event_doc_id_must_exist",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_31_llm_event_doc_id_must_exist (__main__.AuditChecks.test_31_llm_event_doc_id_must_exist)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 267, in test_31_llm_event_doc_id_must_exist\n    try:self.assertEqual(pipe._extract_events([d],{\"doc1\":p}),[])\n        ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Lists differ: [RiskEvent(event_id='evt:ai:nonexistent', [135 chars]=[])] != []\n\nFirst list contains 1 additional elements.\nFirst extra element 0:\nRiskEvent(event_id='evt:ai:nonexistent', title='虚构事件', occurred_date='', category='经营', summary='', source_doc_id='nonexistent', resolved=None, resolution_note='', evidence_ids=[])\n\n+ []\n- [RiskEvent(event_id='evt:ai:nonexistent',\n-            title='虚构事件',\n-            occurred_date='',\n-            category='经营',\n-            summary='',\n-            source_doc_id='nonexistent',\n-            resolved=None,\n-            resolution_note='',\n-            evidence_ids=[])]\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_32_llm_parse_failure_nonfatal",
+      "ok": false,
+      "details": [
+        {
+          "kind": "error",
+          "case": "test_32_llm_parse_failure_nonfatal (__main__.AuditChecks.test_32_llm_parse_failure_nonfatal)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 274, in test_32_llm_parse_failure_nonfatal\n    ev=pipe._extract_events([doc()],{\"doc1\":ParsedDoc(\"doc1\",0,[],False,error=\"bad pdf\")})\n  File \"/Users/shixiong/Developer/pailei/app/engine/pipeline.py\", line 390, in _extract_events\n    \"excerpt\": (parsed[d.doc_id].pages[0][1][:600] if d.doc_id in parsed else \"\"),\n                ~~~~~~~~~~~~~~~~~~~~~~^^^\nIndexError: list index out of range\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_33_ai_downgrade_recomputes_coverage",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_33_ai_downgrade_recomputes_coverage (__main__.AuditChecks.test_33_ai_downgrade_recomputes_coverage)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 286, in test_33_ai_downgrade_recomputes_coverage\n    self.assertEqual(out.coverage.insufficient,before+1)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 35 != 36\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_34_financial_fact_metadata_survives_db",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_34_financial_fact_metadata_survives_db (__main__.AuditChecks.test_34_financial_fact_metadata_survives_db)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 292, in test_34_financial_fact_metadata_survives_db\n    self.assertTrue({\"period_start\",\"audited\",\"consolidated\"} <= set(row))\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: False is not true\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_35_log_counts_not_duplicated",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_35_log_counts_not_duplicated (__main__.AuditChecks.test_35_log_counts_not_duplicated)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 297, in test_35_log_counts_not_duplicated\n    self.assertEqual(db.source_stats()[0][\"ok_count\"],1)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 2 != 1\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_36_industry_pack_saved_correctly",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_36_industry_pack_saved_correctly (__main__.AuditChecks.test_36_industry_pack_saved_correctly)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 303, in test_36_industry_pack_saved_correctly\n    self.assertEqual(bk.to_result().industry_pack,\"bank\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'general' != 'bank'\n- general\n+ bank\n\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_37_non_object_request_is_4xx",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_37_non_object_request_is_4xx (__main__.AuditChecks.test_37_non_object_request_is_4xx) (value=[])",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 311, in test_37_non_object_request_is_4xx\n    self.assertLess(r.status_code,500)\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^\nAssertionError: 500 not less than 500\n"
+        },
+        {
+          "kind": "failure",
+          "case": "test_37_non_object_request_is_4xx (__main__.AuditChecks.test_37_non_object_request_is_4xx) (value=None)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 311, in test_37_non_object_request_is_4xx\n    self.assertLess(r.status_code,500)\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^\nAssertionError: 500 not less than 500\n"
+        },
+        {
+          "kind": "failure",
+          "case": "test_37_non_object_request_is_4xx (__main__.AuditChecks.test_37_non_object_request_is_4xx) (value=42)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 311, in test_37_non_object_request_is_4xx\n    self.assertLess(r.status_code,500)\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^\nAssertionError: 500 not less than 500\n"
+        },
+        {
+          "kind": "failure",
+          "case": "test_37_non_object_request_is_4xx (__main__.AuditChecks.test_37_non_object_request_is_4xx) (value='text')",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 311, in test_37_non_object_request_is_4xx\n    self.assertLess(r.status_code,500)\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^\nAssertionError: 500 not less than 500\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_38_ambiguous_name_not_auto_selected",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_38_ambiguous_name_not_auto_selected (__main__.AuditChecks.test_38_ambiguous_name_not_auto_selected)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 321, in test_38_ambiguous_name_not_auto_selected\n    self.assertFalse(result.ok)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^\nAssertionError: True is not false\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_39_noncompany_security_rejected",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_39_noncompany_security_rejected (__main__.AuditChecks.test_39_noncompany_security_rejected)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 328, in test_39_noncompany_security_rejected\n    self.assertFalse(result.ok)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^\nAssertionError: True is not false\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_40_explicit_wrong_exchange_rejected",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_40_explicit_wrong_exchange_rejected (__main__.AuditChecks.test_40_explicit_wrong_exchange_rejected)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 333, in test_40_explicit_wrong_exchange_rejected\n    self.assertFalse(result.ok)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^\nAssertionError: True is not false\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_41_completed_task_not_partial_for_basis_note",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_41_completed_task_not_partial_for_basis_note (__main__.AuditChecks.test_41_completed_task_not_partial_for_basis_note)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 366, in test_41_completed_task_not_partial_for_basis_note\n    self.assertEqual(result.status,TaskStatus.SUCCEEDED,\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                     \"口径说明被放入 gaps，任何有财报扫描必然部分完成，缓存仅匹配完成\")\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <TaskStatus.PARTIAL: '部分完成'> != <TaskStatus.SUCCEEDED: '完成'> : 口径说明被放入 gaps，任何有财报扫描必然部分完成，缓存仅匹配完成\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_42_expired_deadline_stops_expensive_steps",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_42_expired_deadline_stops_expensive_steps (__main__.AuditChecks.test_42_expired_deadline_stops_expensive_steps)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 375, in test_42_expired_deadline_stops_expensive_steps\n    self.assertEqual(calls,[])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^\nAssertionError: Lists differ: ['finance_after_deadline'] != []\n\nFirst list contains 1 additional elements.\nFirst extra element 0:\n'finance_after_deadline'\n\n- ['finance_after_deadline']\n+ []\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_43_five_parallel_pipelines_complete_without_db_lock",
+      "ok": true,
+      "details": []
+    },
+    {
+      "test": "__main__.AuditChecks.test_44_db_rollback_works",
+      "ok": true,
+      "details": []
+    },
+    {
+      "test": "__main__.AuditChecks.test_45_ssrf_direct_loopback_rejected",
+      "ok": true,
+      "details": []
+    },
+    {
+      "test": "__main__.AuditChecks.test_46_partial_llm_batch_preserves_good_results",
+      "ok": true,
+      "details": []
+    },
+    {
+      "test": "__main__.AuditChecks.test_47_unavailable_llm_never_calls_network",
+      "ok": true,
+      "details": []
+    },
+    {
+      "test": "__main__.AuditChecks.test_48_download_limit_is_enforced",
+      "ok": true,
+      "details": []
+    },
+    {
+      "test": "__main__.AuditChecks.test_49_adjusted_debt_ratio_denominator",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_49_adjusted_debt_ratio_denominator (__main__.AuditChecks.test_49_adjusted_debt_ratio_denominator)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 421, in test_49_adjusted_debt_ratio_denominator\n    self.assertEqual(o.status,RuleStatus.RISK,o.finding)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: <RuleStatus.NORMAL: '已覆盖资料中未发现明显异常'> != <RuleStatus.RISK: '发现风险'> : 剔除预收款后的资产负债率 = 60.00%；（总负债 0.00 亿元 - 预收款项 0.00 亿元）/ 总资产 0.00 亿元\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_50_duplicate_running_submissions_reused",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_50_duplicate_running_submissions_reused (__main__.AuditChecks.test_50_duplicate_running_submissions_reused)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 430, in test_50_duplicate_running_submissions_reused\n    self.assertEqual(a[\"task_id\"],b[\"task_id\"])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'b21f98f05260' != 'f2a164db9292'\n- b21f98f05260\n+ f2a164db9292\n\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_51_read_connection_is_closed",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_51_read_connection_is_closed (__main__.AuditChecks.test_51_read_connection_is_closed)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 439, in test_51_read_connection_is_closed\n    with self.assertRaises(sqlite3.ProgrammingError):seen[0].execute(\"SELECT 1\")\n         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: ProgrammingError not raised\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_52_standard_unqualified_audit_not_flagged",
+      "ok": false,
+      "details": [
+        {
+          "kind": "failure",
+          "case": "test_52_standard_unqualified_audit_not_flagged (__main__.AuditChecks.test_52_standard_unqualified_audit_not_flagged)",
+          "trace": "Traceback (most recent call last):\n  File \"/Users/shixiong/Developer/pailei/docs/acceptance-2026-09-06/regression_checks.py\", line 445, in test_52_standard_unqualified_audit_not_flagged\n    self.assertEqual(scan_audit_opinions(p),[])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Lists differ: [{'label': '非标准审计意见', 'severity': 'high', [69 chars]意见'}] != []\n\nFirst list contains 1 additional elements.\nFirst extra element 0:\n{'label': '非标准审计意见', 'severity': 'high', 'page': 1, 'quote': '会计师事务所对本年度财务报表出具了标准无保留意见。', 'matched': '出具了标准无保留意见'}\n\n+ []\n- [{'label': '非标准审计意见',\n-   'matched': '出具了标准无保留意见',\n-   'page': 1,\n-   'quote': '会计师事务所对本年度财务报表出具了标准无保留意见。',\n-   'severity': 'high'}]\n"
+        }
+      ]
+    },
+    {
+      "test": "__main__.AuditChecks.test_53_full_rule_engine_routes_all_industry_packs",
+      "ok": true,
+      "details": []
+    }
+  ]
+}

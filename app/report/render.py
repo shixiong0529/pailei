@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import copy
 import re
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape, StrictUndef
 from app.config import settings
 from app.core.models import now_iso
 from app.report import charts
+from app.engine.rules.base import RULE_VERSION
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
@@ -118,6 +120,7 @@ _dimension_desc = {
 def _env() -> Environment:
     return Environment(
         loader=FileSystemLoader(str(TEMPLATE_DIR)),
+        undefined=StrictUndefined,
         autoescape=select_autoescape(["html", "j2"]),
         trim_blocks=True,
         lstrip_blocks=True,
@@ -139,6 +142,27 @@ def _reverse(series: list[dict]) -> list[dict]:
 
 
 def build_context(payload: dict[str, Any]) -> dict[str, Any]:
+    payload = copy.deepcopy(payload)
+    # 旧版本未记录的可选展示元数据，在输入边界显式提供兼容默认；模板仍严格检查变量名。
+    defaults = {
+        "security": {"exchange": "", "industry": "", "currency": ""},
+        "scan": {"started_at": "", "status": "", "timed_out": False},
+        "data_scope": {"announcement_range": "", "announcement_fetched": 0, "documents_downloaded": 0,
+                       "evidence_count": 0, "evidence_verified": 0, "latest_period_label": "", "latest_period": ""},
+        "summary": {"risk_count": 0, "watch_count": 0, "insufficient_count": 0, "highest_severity": "未定", "top_findings": []},
+        "method": {"disclaimer": "", "limitations": []},
+        "ai": {"notes": [], "verification": []},
+        "metrics": {"currency": "未核实"},
+    }
+    for key, fallback in defaults.items():
+        payload[key] = {**fallback, **(payload.get(key) or {})}
+    payload["ai"]["usage"] = {"available": False, "model": "", "calls": 0, "spent_cny": 0,
+                              "reason": "", "failures": [], **(payload["ai"].get("usage") or {})}
+    for dim in payload.get("dimensions") or []:
+        for result in dim.get("results") or []:
+            for key, value in {"evidence_ids": [], "mitigations": [], "to_verify": [], "still_effective": None,
+                               "ai_interpreted": False, "strength": "线索待核实", "why": ""}.items():
+                result.setdefault(key, value)
     trends = payload.get("trends") or {}
     chart_blocks = []
     for key, title, color in TREND_SPECS:
@@ -158,6 +182,14 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     coverage = summary.get("coverage") or {}
     dimensions = payload.get("dimensions") or []
     risk_score = risk_signal_score(dimensions)
+    evaluated = sum(r.get("status") in {"发现风险", "需要关注", "已覆盖资料中未发现明显异常"}
+                    for dim in dimensions for r in dim.get("results") or [])
+    if coverage.get("evaluated", evaluated) == 0 or evaluated == 0:
+        risk_score.update(score="—", grade="—", label="资料不足，暂不形成评级")
+    elif summary.get("insufficient_count") or payload.get("gaps"):
+        if risk_score["grade"] == "A":
+            risk_score["label"] = "已覆盖项目风险信号较少，仍有资料缺口"
+    coverage = {"evaluated": evaluated, "applicable": evaluated, "insufficient": 0, **coverage}
 
     metrics = payload.get("metrics") or {}
     metric_items = list((metrics.get("items") or {}).values())
@@ -169,6 +201,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "payload": payload,
+        "current_rule_version": RULE_VERSION,
         "security": payload.get("security") or {},
         "company": payload.get("company") or {},
         "scan": payload.get("scan") or {},
@@ -190,6 +223,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
         "timeline": payload.get("timeline") or [],
         "mitigations": payload.get("mitigations") or [],
         "gaps": payload.get("gaps") or [],
+        "notes": payload.get("notes") or [],
         "missing_data": payload.get("missing_data") or [],
         "evidence_map": evidence_map,
         "documents": documents,
@@ -199,7 +233,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
         "status_class": STATUS_CLASS,
         "severity_class": SEVERITY_CLASS,
         "safe_url": safe_url,
-        "rendered_at": now_iso(),
+        "rendered_at": payload.get("generated_at") or payload.get("scan", {}).get("started_at") or "未记录",
     }
 
 

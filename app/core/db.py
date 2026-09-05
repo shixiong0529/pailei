@@ -187,8 +187,16 @@ CREATE TABLE IF NOT EXISTS llm_usage (
 _lock = threading.Lock()
 
 
+class ClosingConnection(sqlite3.Connection):
+    def __exit__(self, *args):
+        try:
+            return super().__exit__(*args)
+        finally:
+            self.close()
+
+
 def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(settings.db_path, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(settings.db_path, timeout=30, check_same_thread=False, factory=ClosingConnection)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -197,6 +205,16 @@ def init_db() -> None:
     settings.db_path.parent.mkdir(parents=True, exist_ok=True)
     with connect() as conn:
         conn.executescript(SCHEMA)
+        # 向后兼容迁移：历史行未知字段保持 NULL，不伪造审计/口径属性。
+        for table, columns in {
+            "financial_facts": {"period_start": "TEXT", "audited": "INTEGER", "consolidated": "INTEGER"},
+            "fetch_logs": {"record_id": "TEXT"},
+        }.items():
+            existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+            for name, kind in columns.items():
+                if name not in existing:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {kind}")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_fetch_record ON fetch_logs(task_id,record_id)")
         conn.commit()
 
 
@@ -206,6 +224,9 @@ def tx():
     try:
         yield conn
         conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
@@ -216,7 +237,7 @@ def tx():
 def create_task(task_id: str, query: str, params: dict[str, Any] | None = None) -> None:
     with tx() as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO scan_tasks "
+            "INSERT OR IGNORE INTO scan_tasks "
             "(task_id, query, status, stage, stage_index, params, created_at) "
             "VALUES (?,?,?,?,?,?,?)",
             (
@@ -258,13 +279,13 @@ def list_tasks(limit: int = 50) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
-def find_recent_task(query: str, within_minutes: int = 60) -> dict[str, Any] | None:
+def find_recent_task(query: str, within_minutes: int = 60, rule_version: str | None = None) -> dict[str, Any] | None:
     """对重复提交去重：同一查询在短时间内且已完成的任务可复用。"""
     with connect() as conn:
         row = conn.execute(
-            "SELECT * FROM scan_tasks WHERE query=? AND status='完成' "
-            "ORDER BY created_at DESC LIMIT 1",
-            (query,),
+            "SELECT * FROM scan_tasks WHERE query=? AND status IN ('完成','部分完成') "
+            "AND (? IS NULL OR rule_version=?) ORDER BY created_at DESC LIMIT 1",
+            (query, rule_version, rule_version),
         ).fetchone()
     if not row:
         return None
@@ -288,7 +309,8 @@ def save_facts(task_id: str, facts: Iterable[Any]) -> int:
                 task_id, f.secucode, f.statement.value, f.raw_item, f.std_item, f.value,
                 f.unit, f.currency, f.period_end, f.period_type.value, f.fiscal_year,
                 f.notice_date, f.source_id, f.source_url, f.extraction,
-                1 if f.verified else 0, f.note, f.fetched_at,
+                1 if f.verified else 0, f.note, f.fetched_at, f.period_start,
+                None if f.audited is None else int(f.audited), int(f.consolidated),
             )
         )
     if not rows:
@@ -297,8 +319,8 @@ def save_facts(task_id: str, facts: Iterable[Any]) -> int:
         conn.executemany(
             "INSERT INTO financial_facts (task_id, secucode, statement, raw_item, std_item, value,"
             " unit, currency, period_end, period_type, fiscal_year, notice_date, source_id,"
-            " source_url, extraction, verified, note, fetched_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " source_url, extraction, verified, note, fetched_at, period_start, audited, consolidated) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             rows,
         )
     return len(rows)
@@ -412,34 +434,22 @@ def save_report(task_id: str, html_path: str, json_path: str, payload: dict[str,
 
 
 def save_fetch_logs(task_id: str, records: Iterable[Any]) -> None:
-    rows = [
-        (
-            task_id, r.url, r.stage, 1 if r.ok else 0, r.status_code, r.elapsed_ms,
-            r.bytes, r.attempts, r.error, r.host,
-        )
-        for r in records
-    ]
-    if not rows:
-        return
     with tx() as conn:
-        conn.executemany(
-            "INSERT INTO fetch_logs (task_id, url, stage, ok, status_code, elapsed_ms, bytes,"
-            " attempts, error, host) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            rows,
-        )
         for r in records:
-            host = r.host or "unknown"
+            inserted = conn.execute(
+                "INSERT OR IGNORE INTO fetch_logs (task_id,url,stage,ok,status_code,elapsed_ms,bytes,attempts,error,host,record_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (task_id, r.url, r.stage, int(r.ok), r.status_code, r.elapsed_ms, r.bytes,
+                 r.attempts, r.error, r.host, r.record_id),
+            ).rowcount
+            if not inserted:
+                continue
             conn.execute(
-                "INSERT INTO source_health (host, ok_count, fail_count, bytes, last_error, updated_at)"
-                " VALUES (?,?,?,?,?,?) ON CONFLICT(host) DO UPDATE SET "
-                " ok_count=ok_count+excluded.ok_count, fail_count=fail_count+excluded.fail_count,"
-                " bytes=bytes+excluded.bytes, last_error=excluded.last_error,"
-                " updated_at=excluded.updated_at",
-                (
-                    host, 1 if r.ok else 0, 0 if r.ok else 1, r.bytes,
-                    None if r.ok else (r.error or "")[:300],
-                    datetime.now().isoformat(timespec="seconds"),
-                ),
+                "INSERT INTO source_health (host,ok_count,fail_count,bytes,last_error,updated_at) "
+                "VALUES (?,?,?,?,?,?) ON CONFLICT(host) DO UPDATE SET "
+                "ok_count=ok_count+excluded.ok_count,fail_count=fail_count+excluded.fail_count,"
+                "bytes=bytes+excluded.bytes,last_error=excluded.last_error,updated_at=excluded.updated_at",
+                (r.host or "unknown", int(r.ok), int(not r.ok), r.bytes,
+                 None if r.ok else (r.error or "")[:300], datetime.now().isoformat(timespec="seconds")),
             )
 
 

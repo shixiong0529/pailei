@@ -25,6 +25,8 @@ from app.core.models import STAGE_DETAIL, STAGE_ORDER, Stage, TaskStatus
 from app.data.eastmoney import EastmoneyClient
 from app.data.identity import IdentityResolver
 from app.engine.pipeline import ScanPipeline
+from app.engine.rules.base import RULE_VERSION
+from app.llm.adapter import LLMAdapter
 from app.report.render import render_inline
 
 WEB_DIR = __import__("pathlib").Path(__file__).parent / "web"
@@ -71,7 +73,7 @@ def home(request: Request):
         app_name=settings.app_name,
         tasks=tasks,
         llm_ready=settings.llm_ready,
-        llm_reason="" if settings.llm_ready else "未配置 LLM_API_KEY，AI 解读步骤不参与扫描",
+        llm_reason=LLMAdapter().unavailable_reason,
     )
 
 
@@ -130,14 +132,10 @@ def report_page(task_id: str):
 
 @app.get("/download/{task_id}")
 def download_report(task_id: str):
-    paths = db.load_latest_report_paths(task_id)
-    if not paths:
+    payload = db.load_report_payload(task_id)
+    if payload is None:
         raise HTTPException(status_code=404, detail="报告尚未生成")
-    html_path = paths[0]
-    try:
-        content = open(html_path, "rb").read()
-    except OSError as exc:
-        raise HTTPException(status_code=500, detail=f"报告文件读取失败: {exc}")
+    content = render_inline(payload).encode("utf-8")
     filename = f"report-{task_id}.html"
     return Response(
         content=content,
@@ -174,32 +172,42 @@ def suggest(q: str = Query("", min_length=0)):
 
 @app.post("/api/scan")
 async def create_scan(request: Request):
-    body: dict[str, Any] = {}
     try:
         body = await request.json()
     except Exception:
-        pass
-    query = str(body.get("query") or "").strip()
-    if not query:
-        raise HTTPException(status_code=400, detail="请输入股票名称或代码")
-
-    # 去重：同一查询在 60 分钟内已完成的任务直接复用
-    recent = db.find_recent_task(query, within_minutes=60)
-    if recent and not body.get("force"):
-        return JSONResponse(
-            {
-                "ok": True,
-                "task_id": recent["task_id"],
-                "reused": True,
-                "message": "已有 60 分钟内的扫描结果，已直接复用；如需重新扫描请勾选强制刷新",
-            }
-        )
-
-    task_id = uuid.uuid4().hex[:12]
-    db.create_task(task_id, query, params={"force": bool(body.get("force"))})
+        raise HTTPException(status_code=400, detail="请求必须是合法 JSON 对象")
+    if not isinstance(body, dict) or not isinstance(body.get("query"), str):
+        raise HTTPException(status_code=400, detail="query 必须是字符串")
+    if "force" in body and type(body["force"]) is not bool:
+        raise HTTPException(status_code=400, detail="force 必须是布尔值")
+    query = body["query"].strip()
+    if not query or len(query) > 120:
+        raise HTTPException(status_code=400, detail="请输入 1—120 字的股票名称或代码")
+    if query.replace(".", "").isalnum():
+        query = query.upper()
+    force = body.get("force", False)
     with _lock:
+        # 同一进程的运行任务始终复用，包括强制刷新，避免重复计费。
+        for active_id in _running:
+            active = db.get_task(active_id)
+            if active and active["query"] == query:
+                return JSONResponse({"ok": True, "task_id": active_id, "reused": True,
+                                     "message": "相同证券正在扫描，已复用该任务"})
+        recent = db.find_recent_task(query, within_minutes=60, rule_version=RULE_VERSION)
+        if recent and not force:
+            return JSONResponse({"ok": True, "task_id": recent["task_id"], "reused": True,
+                                 "message": "已复用 60 分钟内的扫描结果；可强制刷新"})
+        if len(_running) >= MAX_WORKERS * 2:
+            raise HTTPException(status_code=429, detail="扫描队列已满，请稍后重试")
+        task_id = uuid.uuid4().hex[:12]
+        db.create_task(task_id, query, params={"force": force})
         _running[task_id] = time.time()
-    executor.submit(_run_task, task_id, query)
+        try:
+            executor.submit(_run_task, task_id, query)
+        except Exception:
+            _running.pop(task_id, None)
+            db.update_task(task_id, status=TaskStatus.FAILED.value, error="任务提交失败")
+            raise HTTPException(status_code=503, detail="任务提交失败，请重试")
     return JSONResponse({"ok": True, "task_id": task_id, "reused": False})
 
 

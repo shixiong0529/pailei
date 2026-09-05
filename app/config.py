@@ -53,7 +53,7 @@ def _f(name: str, default: float) -> float:
 class LLMConfig:
     """模型接入配置：可替换供应商，统一走 OpenAI 兼容协议。"""
 
-    enabled: bool = field(default=False)
+    enabled: bool = field(default=True)
     api_key: str = ""
     base_url: str = "https://api.deepseek.com/v1"
     model: str = "deepseek-chat"
@@ -115,7 +115,7 @@ class Settings:
 
     @property
     def llm_ready(self) -> bool:
-        return bool(self.enable_llm and self.llm.configured)
+        return bool(self.enable_network and self.enable_llm and self.llm.enabled and self.llm.configured)
 
 
 def load_settings() -> Settings:

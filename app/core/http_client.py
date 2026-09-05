@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import ipaddress
 import random
+import queue
+import uuid
 import socket
 import threading
 import time
@@ -19,6 +21,8 @@ from typing import Any, Iterable
 from urllib.parse import urlparse
 
 import httpx
+import httpcore
+from contextlib import contextmanager
 
 from app.config import settings
 
@@ -44,6 +48,7 @@ class FetchRecord:
     attempts: int = 0
     error: str | None = None
     host: str = ""
+    record_id: str = field(default_factory=lambda: uuid.uuid4().hex)
 
 
 @dataclass
@@ -60,7 +65,7 @@ class RateLimiter:
         self._buckets: dict[str, _Bucket] = {}
         self._lock = threading.Lock()
 
-    def acquire(self, host: str) -> None:
+    def acquire(self, host: str, deadline: float | None = None) -> None:
         while True:
             with self._lock:
                 bucket = self._buckets.setdefault(host, _Bucket(self.rps))
@@ -69,6 +74,8 @@ class RateLimiter:
                 if wait <= 0:
                     bucket.last = now
                     return
+            if deadline is not None and time.time() + wait >= deadline:
+                raise FetchError("任务期限已到，停止等待限流", stage="deadline")
             time.sleep(wait + random.uniform(0, 0.01))
 
 
@@ -87,7 +94,7 @@ _PRIVATE_NETS = [
 ALLOWED_SCHEMES = {"http", "https"}
 
 
-def assert_safe_url(url: str) -> str:
+def assert_safe_url(url: str, *, timeout: float | None = None) -> str:
     """校验 URL 合法性，默认阻断内网与非法协议。"""
     parsed = urlparse(url)
     if parsed.scheme.lower() not in ALLOWED_SCHEMES:
@@ -95,17 +102,82 @@ def assert_safe_url(url: str) -> str:
     host = parsed.hostname
     if not host:
         raise FetchError("缺少主机名", url=url, stage="guard")
-    if settings.allow_private_address:
-        return url
-    try:
-        infos = socket.getaddrinfo(host, None)
-    except socket.gaierror as exc:
-        raise FetchError(f"域名解析失败: {host}", url=url, stage="guard", cause=exc) from exc
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if any(ip in net for net in _PRIVATE_NETS):
-            raise FetchError(f"拒绝访问内网地址: {host} -> {ip}", url=url, stage="guard")
+    if parsed.username or parsed.password:
+        raise FetchError("URL 不允许包含凭证", url=url, stage="guard")
+    _public_addresses(host, timeout)
     return url
+
+
+_dns_slots = threading.BoundedSemaphore(8)
+
+
+def _resolve_host(host: str, timeout: float | None) -> list[str]:
+    # 系统 DNS 解析没有 socket timeout，限制等待时间和挂起解析数量，避免占住扫描线程。
+    timeout = settings.http_timeout if timeout is None else timeout
+    started = time.monotonic()
+    if timeout <= 0 or not _dns_slots.acquire(timeout=timeout):
+        raise FetchError("DNS 解析等待超时", stage="guard")
+    result = queue.Queue(maxsize=1)
+    def resolve():
+        try:
+            result.put(socket.getaddrinfo(host, None))
+        except Exception as exc:
+            result.put(exc)
+        finally:
+            _dns_slots.release()
+    threading.Thread(target=resolve, daemon=True).start()
+    try:
+        value = result.get(timeout=max(0, timeout - (time.monotonic() - started)))
+    except queue.Empty:
+        raise FetchError("DNS 解析超时", stage="guard")
+    if isinstance(value, Exception):
+        raise FetchError(f"域名解析失败: {host}", stage="guard") from value
+    return list(dict.fromkeys(info[4][0] for info in value))
+
+
+def _public_addresses(host: str, timeout: float | None = None) -> list[str]:
+    try:
+        literal = ipaddress.ip_address(host.split("%")[0])
+        addresses = [str(literal)]
+    except ValueError:
+        try:
+            addresses = _resolve_host(host, timeout)
+        except socket.gaierror as exc:
+            raise FetchError(f"域名解析失败: {host}", stage="guard") from exc
+    if not addresses:
+        raise FetchError("域名未返回地址", stage="guard")
+    for address in addresses:
+        ip = ipaddress.ip_address(address.split("%")[0])
+        ip = ip.ipv4_mapped if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped else ip
+        if not settings.allow_private_address and (not ip.is_global or ip.is_multicast or ip.is_reserved):
+            raise FetchError(f"拒绝访问非公网地址: {host}", stage="guard")
+    return addresses
+
+
+class PublicNetworkBackend(httpcore.SyncBackend):
+    """在真正建立连接时重新验证 DNS，并连接已验证的 IP，TLS 仍验证原域名。"""
+    def connect_tcp(self, host, port, timeout=None, local_address=None, socket_options=None):
+        if not settings.enable_network:
+            raise FetchError("已关闭网络访问", stage="guard")
+        started = time.monotonic()
+        addresses = _public_addresses(host, timeout)
+        last = None
+        for address in addresses:
+            remaining = None if timeout is None else timeout - (time.monotonic() - started)
+            if remaining is not None and remaining <= 0:
+                raise httpcore.ConnectTimeout()
+            try:
+                return super().connect_tcp(address, port, remaining, local_address, socket_options)
+            except (httpcore.ConnectError, httpcore.ConnectTimeout) as exc:
+                last = exc
+        raise last or httpcore.ConnectError()
+
+
+def public_transport() -> httpx.HTTPTransport:
+    transport = httpx.HTTPTransport(trust_env=False)
+    # HTTPX does not expose a backend argument; keep this single integration point tested.
+    transport._pool._network_backend = PublicNetworkBackend()
+    return transport
 
 
 class HttpClient:
@@ -113,9 +185,12 @@ class HttpClient:
 
     def __init__(self, records: list[FetchRecord] | None = None):
         self.records: list[FetchRecord] = records if records is not None else []
+        self.deadline: float | None = None
         self._client = httpx.Client(
             timeout=settings.http_timeout,
-            follow_redirects=True,
+            follow_redirects=False,
+            transport=public_transport(),
+            trust_env=False,
             headers={"User-Agent": settings.user_agent},
         )
 
@@ -132,6 +207,44 @@ class HttpClient:
         self.records.append(rec)
         return rec
 
+    def _remaining(self, timeout: float) -> float:
+        if not settings.enable_network:
+            raise FetchError("已关闭网络访问（ENABLE_NETWORK=false）", stage="guard")
+        if self.deadline is not None:
+            timeout = min(timeout, self.deadline - time.time())
+        if timeout <= 0:
+            raise FetchError("任务期限已到", stage="deadline")
+        return timeout
+
+    def _sleep(self, seconds: float) -> None:
+        if self.deadline is not None and time.time() + seconds >= self.deadline:
+            raise FetchError("任务期限已到，停止重试", stage="deadline")
+        time.sleep(seconds)
+
+    @contextmanager
+    def _stream(self, method: str, url: str, *, timeout: float, **kwargs):
+        request = self._client.build_request(method, url, timeout=self._remaining(timeout), **kwargs)
+        for _ in range(11):
+            self._remaining(timeout)
+            assert_safe_url(str(request.url), timeout=self._remaining(timeout))
+            limiter.acquire(request.url.host, self.deadline)
+            remaining = self._remaining(timeout)
+            request.extensions["timeout"] = dict(connect=remaining, read=remaining, write=remaining, pool=remaining)
+            response = self._client.send(request, stream=True, follow_redirects=False)
+            if response.has_redirect_location:
+                next_request = response.next_request
+                response.close()
+                if next_request is None:
+                    raise FetchError("重定向缺少目标", url=url, stage="guard")
+                request = next_request
+                continue
+            try:
+                yield response
+            finally:
+                response.close()
+            return
+        raise FetchError("重定向次数超过上限", url=url, stage="guard")
+
     def request(
         self,
         method: str,
@@ -145,7 +258,8 @@ class HttpClient:
         timeout: float | None = None,
         retries: int | None = None,
     ) -> httpx.Response:
-        assert_safe_url(url)
+        self._remaining(timeout or settings.http_timeout)
+        assert_safe_url(url, timeout=self._remaining(timeout or settings.http_timeout))
         host = urlparse(url).hostname or ""
         attempts = 0
         max_attempts = max(1, retries if retries is not None else settings.http_retries)
@@ -153,18 +267,17 @@ class HttpClient:
 
         while attempts < max_attempts:
             attempts += 1
-            limiter.acquire(host)
             started = time.monotonic()
             try:
-                resp = self._client.request(
-                    method,
-                    url,
-                    params=params,
-                    data=data,
-                    json=json_body,
-                    headers=headers,
-                    timeout=timeout or settings.http_timeout,
-                )
+                with self._stream(method, url, params=params, data=data, json=json_body,
+                                  headers=headers, timeout=timeout or settings.http_timeout) as resp:
+                    body = bytearray()
+                    for chunk in resp.iter_bytes(65536):
+                        self._remaining(timeout or settings.http_timeout)
+                        body.extend(chunk)
+                        if len(body) > settings.max_file_bytes:
+                            raise FetchError("响应超过体积上限", url=url, stage=stage)
+                    resp._content = bytes(body)
                 elapsed = int((time.monotonic() - started) * 1000)
                 rec = FetchRecord(
                     url=url,
@@ -180,7 +293,7 @@ class HttpClient:
                     rec.error = f"HTTP {resp.status_code}"
                     if resp.status_code in (429, 500, 502, 503, 504) and attempts < max_attempts:
                         self._record(rec)
-                        time.sleep(settings.http_backoff * attempts)
+                        self._sleep(settings.http_backoff * attempts)
                         continue
                     self._record(rec)
                     raise FetchError(f"HTTP {resp.status_code} {url}", url=url, stage=stage)
@@ -203,7 +316,7 @@ class HttpClient:
                     )
                 )
                 if attempts < max_attempts:
-                    time.sleep(settings.http_backoff * attempts)
+                    self._sleep(settings.http_backoff * attempts)
                     continue
         raise FetchError(f"请求失败: {url} ({last_error})", url=url, stage=stage, cause=last_error)
 
@@ -218,18 +331,18 @@ class HttpClient:
         """流式下载，限制体积，写入目标路径。"""
         import os
 
-        assert_safe_url(url)
+        self._remaining(settings.download_timeout)
+        assert_safe_url(url, timeout=self._remaining(settings.download_timeout))
         dest = Path(dest)
         if not dest.parent.exists():
             dest.parent.mkdir(parents=True)
         host = urlparse(url).hostname or ""
         headers = dict(headers_extra := ({"Referer": referer} if referer else {}))
-        limiter.acquire(host)
         started = time.monotonic()
         written = 0
         tmp = dest.with_suffix(dest.suffix + ".part")
         try:
-            with self._client.stream(
+            with self._stream(
                 "GET", url, headers=headers, timeout=settings.download_timeout
             ) as resp:
                 if resp.status_code >= 400:
@@ -240,6 +353,7 @@ class HttpClient:
                     raise FetchError(f"下载失败 HTTP {resp.status_code}: {url}", url=url, stage=stage)
                 with open(tmp, "wb") as fh:
                     for chunk in resp.iter_bytes(65536):
+                        self._remaining(settings.download_timeout)
                         written += len(chunk)
                         if written > settings.max_file_bytes:
                             raise FetchError(

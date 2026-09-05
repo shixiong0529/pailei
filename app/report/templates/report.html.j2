@@ -101,7 +101,13 @@ section{scroll-margin-top:16px}
   section{padding:18px 16px}
   header.hero{padding:18px 16px}
   h1{font-size:21px}
-  table{font-size:12.5px}
+  table{font-size:12.5px;display:block;overflow-x:auto;max-width:100%}
+  thead,tbody{min-width:620px}
+  table th:first-child,table td:first-child{min-width:110px}
+  table th:nth-child(4),table td:nth-child(4){min-width:230px}
+  .badge{white-space:normal;min-width:65px;max-width:125px}
+  .toc .desc{display:none}
+  .score-side{min-width:0;flex-basis:100%}
   th,td{padding:7px 6px}
   section h2{padding:8px 12px;font-size:15.5px}
   section h3{padding:4px 10px;font-size:13px}
@@ -116,13 +122,14 @@ section{scroll-margin-top:16px}
 </head>
 <body>
 <div class="wrap">
+{% if payload.rule_version != current_rule_version %}<div class="info">此报告由旧版规则 {{ payload.rule_version }} 生成。查看修复后的计算结果，请重新扫描该证券。</div>{% endif %}
 
 <header class="hero">
   <div class="eyebrow">A 股 / 港股基本面排雷报告</div>
   <h1>{{ security.name }}（{{ security.secucode }}）排雷报告</h1>
   <div class="sub">
     {{ security.exchange }}{% if security.industry %} · {{ security.industry }}{% endif %}
-    {% if security.currency %} · 报表币种 {{ security.currency }}{% endif %}
+     · 报表币种 {{ metrics.currency }}{% if security.currency %} · 证券交易币种 {{ security.currency }}{% endif %}
     {% if industry_pack and industry_pack != 'general' %} · 适用 {{ industry_pack }} 行业规则包{% endif %}
   </div>
   <div class="sub" style="margin-top:4px">
@@ -167,6 +174,9 @@ section{scroll-margin-top:16px}
   </div>
   <p class="score-note">评分为检查项扣分加权汇总，反映风险信号密度，不代表投资价值或违约概率。</p>
 
+  <p class="hint">适用检查 {{ coverage.applicable }} 项，已形成判断 {{ coverage.evaluated }} 项，
+    <b>{{ summary.insufficient_count }}</b> 项数据不足。扫描状态：{{ scan.status or '未记录' }}。
+    原文存在性复核通过不等于已确认整条结论。</p>
   {% if summary.risk_count or summary.watch_count %}
   <div class="warn">
     本次在已获取资料范围内发现 <b>{{ summary.risk_count }}</b> 项风险、
@@ -242,6 +252,7 @@ section{scroll-margin-top:16px}
         <span class="badge" style="background:#f1f5f9;color:#475569">{{ r.severity }}</span></h4>
       <div class="row"><span class="label">发现了什么</span>{{ r.finding }}</div>
       {% if r.why %}<div class="row"><span class="label">为什么值得关注</span>{{ r.why }}</div>{% endif %}
+      <div class="row"><span class="label">证据支持程度</span>{{ r.strength }}</div>
       {% if r.evidence_ids %}
       <details>
         <summary>展开原始证据（{{ r.evidence_ids|length }} 条）</summary>
@@ -275,7 +286,7 @@ section{scroll-margin-top:16px}
         <ul style="margin:2px 0">{% for v in r.to_verify %}<li>{{ v }}</li>{% endfor %}</ul></div>
       {% endif %}
       <div class="row" style="color:#94a3b8;font-size:12px">
-        规则 {{ r.rule_id }} · 解释来源：{% if r.ai_interpreted %}模型解读（基于上述证据）{% else %}规则模板（未启用模型解读）{% endif %}
+        规则 {{ r.rule_id }} · 解释来源：{% if r.ai_interpreted %}模型解读（基于上述证据）{% else %}规则模板（本项未获得有效模型解读）{% endif %}
       </div>
     </div>
     {% endfor %}
@@ -288,15 +299,24 @@ section{scroll-margin-top:16px}
   <h2><span class="idx">04</span>数据来源与算法</h2>
   <p class="hint">
     AI 解读：{% if ai.usage.available %}已启用（{{ ai.usage.model or '已配置模型' }}，{{ ai.usage.calls or 0 }} 次调用，{{ '%.4f'|format(ai.usage.spent_cny or 0) }} 元）{% else %}未启用——{{ ai.usage.reason or '未配置密钥' }}，结论解释为规则模板文案{% endif %}。
-    计算口径：年报、中报、三季报为年初至期末的<b>累计</b>口径，同比只与同口径上期比较；
-    受限资金已从"可自由使用现金"中扣除；利润为负时不套用普通同比解释。
+    计算口径：期间损益与现金流按各自财年累计，同比只与上一年同期、同币种同口径比较；
+    货币资金扣除受限资金后才计入可用现金，单列的现金及等价物不重复扣除受限现金；缺失口径不估算。
   </p>
-  <p class="hint">{{ method.disclaimer or '本报告由程序计算指标、模型解释异常，所有结论均绑定具体披露文件，不构成投资建议。' }}</p>
+  {% if gaps %}<div class="warn"><b>本次资料与执行缺口</b><ul>{% for gap in gaps %}<li>{{ gap }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if missing_data %}<details><summary>数据不足的检查（{{ missing_data|length }} 项）</summary>
+    <ul>{% for item in missing_data %}<li>{{ item.rule_id }} {{ item.name }}：{{ item.reason }}</li>{% endfor %}</ul></details>{% endif %}
+  {% if notes %}<details><summary>计算口径说明</summary><ul>{% for note in notes %}<li>{{ note }}</li>{% endfor %}</ul></details>{% endif %}
+  {% if ai.notes or ai.usage.failures or ai.verification %}<details><summary>AI 执行与核验详情</summary>
+    <ul>{% for note in ai.notes %}<li>{{ note }}</li>{% endfor %}
+    {% for failure in ai.usage.failures %}<li>未完整执行：{{ failure }}</li>{% endfor %}
+    {% for item in ai.verification %}<li>{{ item.rule_id }}：{{ item.verdict }}；{{ item.reason }}；{{ item.suggested_status }}</li>{% endfor %}</ul></details>{% endif %}
+  {% if method.limitations %}<details><summary>资料范围与方法限制</summary><ul>{% for item in method.limitations %}<li>{{ item }}</li>{% endfor %}</ul></details>{% endif %}
+  <p class="hint">{{ method.disclaimer or '本报告由程序计算指标、模型解释异常，证据支持程度与核验结果分别标注，不构成投资建议。' }}</p>
 </section>
 
 <footer>
   报告 ID {{ payload.task_id }} · 生成于 {{ rendered_at }} · 报告版本 v{{ payload.report_version }} · 规则版本 v{{ payload.rule_version }}<br>
-  本报告由程序计算指标、模型解释异常，所有结论均绑定具体披露文件，不构成投资建议。
+  本报告由程序计算指标、模型解释异常，证据支持程度与核验结果分别标注，不构成投资建议。
 </footer>
 
 </div>
@@ -308,7 +328,7 @@ section{scroll-margin-top:16px}
   function restore(){document.querySelectorAll('details[data-was-closed]').forEach(function(d){d.open=false;d.removeAttribute('data-was-closed')})}
   window.addEventListener('beforeprint',openAll);
   window.addEventListener('afterprint',restore);
-  function openHashTarget(){var t=document.getElementById(location.hash.slice(1));while(t){if(t.tagName==='DETAILS'){t.open=true}t=t.parentElement}}
+  function openHashTarget(){var t=document.getElementById(location.hash.slice(1));if(t){t.querySelectorAll('details').forEach(function(d){d.open=true})}while(t){if(t.tagName==='DETAILS'){t.open=true}t=t.parentElement}}
   window.addEventListener('hashchange',openHashTarget);
   openHashTarget();
 })();

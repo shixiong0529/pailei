@@ -1,0 +1,51 @@
+- navigation:
+  - link "排 基本面排雷 Agent":
+    - /url: /
+    - generic: 排
+    - text: 基本面排雷 Agent
+  - link "首页":
+    - /url: /
+  - link "历史记录":
+    - /url: /history
+  - link "运行状态":
+    - /url: /admin
+- main:
+  - heading "失败 00700" [level=2]:
+    - generic: 失败
+    - text: "00700"
+  - list:
+    - generic: "1"
+    - generic: 公司识别
+    - generic: 匹配证券、公司、行业及 A/H 关系
+    - generic: "2"
+    - generic: 检索规划
+    - generic: 根据市场、行业、报告期生成资料清单
+    - generic: "3"
+    - generic: 资料获取
+    - generic: 分页收集公告、下载财报、去重
+    - generic: "4"
+    - generic: 标准化
+    - generic: 提取科目、币种、单位、报告期并标准化
+    - generic: "5"
+    - generic: 规则检查
+    - generic: 程序计算指标并判断规则是否触发
+    - generic: "6"
+    - generic: 专项阅读
+    - generic: AI 阅读相关附注、公告与事件进展
+    - generic: "7"
+    - generic: 核验
+    - generic: 检查主体、日期、来源与结论是否对应
+    - generic: "8"
+    - generic: 报告生成
+    - generic: 结构化结果渲染为 HTML 报告
+  - generic: 财务事实
+  - generic: "0"
+  - generic: 公告文件
+  - generic: "0"
+  - generic: 耗时
+  - generic: —
+  - generic: 任务异常：验收替身：已记录提交参数，未发起扫描
+  - link "返回首页":
+    - /url: /
+  - paragraph: 任务 ID 29d81b5449bb · 离开页面不会中止后台任务
+- contentinfo: 数据来自东方财富数据中心、巨潮资讯网、港交所披露易公开接口 · 报告不构成投资建议

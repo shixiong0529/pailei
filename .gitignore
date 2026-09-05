@@ -1,5 +1,5 @@
 # 运行时数据（SQLite、下载原文、生成的报告）
-data/
+/data/
 
 # 密钥与环境配置
 .env
@@ -13,3 +13,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+
+# WorkBuddy 本地工作记忆（不进仓库）
+.workbuddy/

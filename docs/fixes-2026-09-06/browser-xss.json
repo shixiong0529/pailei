@@ -1,0 +1,5 @@
+{
+  "candidateText": "<img src=x onerror=\"document.body.dataset.auditXss='executed'\">600519.SH ·  · 代码精确匹配A股",
+  "executableImages": 0,
+  "xssMarker": null
+}

@@ -1,0 +1,2506 @@
+{
+  "reports": [
+    {
+      "id": "276f6bf4261f",
+      "security": "600519.SH",
+      "name": "贵州茅台",
+      "generated_at": "2026-09-05T18:13:37",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 75,
+      "risk_count": 2,
+      "watch_count": 4,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 32,
+        "insufficient": 4,
+        "not_applicable": 16,
+        "completeness": 0.8889,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 12,
+            "数据不足": 0,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 94,
+        "announcement_fetched": 94,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 63,
+        "evidence_verified": 63,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "发现风险",
+        "severity": "中",
+        "strength": "原始披露确认",
+        "finding": "审计报告正文中出现「保留意见」表述",
+        "why": "非标准无保留意见或持续经营不确定性段落，是财务报告可靠性的重大警示",
+        "evidence_ids": [
+          "cninfo:1225475868:p16",
+          "cninfo:1225114741:p56",
+          "cninfo:1225475868:p5",
+          "cninfo:1224764516:p1",
+          "cninfo:1224764513:p1"
+        ],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225114741",
+          "title": "贵州茅台2025年年度报告",
+          "pages": 143
+        },
+        {
+          "id": "cninfo:1225114733",
+          "title": "贵州茅台2025年年度报告（英文版）",
+          "pages": 194
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "4df75f7c244b",
+      "security": "000002.SZ",
+      "name": "万科A",
+      "generated_at": "2026-09-05T23:45:53",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 24,
+      "risk_count": 6,
+      "watch_count": 7,
+      "coverage": {
+        "applicable": 39,
+        "evaluated": 32,
+        "insufficient": 7,
+        "not_applicable": 13,
+        "completeness": 0.8205,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 11,
+            "数据不足": 1,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 4,
+            "不适用": 7
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 5,
+            "数据不足": 2,
+            "不适用": 3
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 184,
+        "announcement_fetched": 184,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 89,
+        "evidence_verified": 89,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "数据不足，无法判断",
+        "severity": "未定",
+        "strength": "部分证据支持",
+        "finding": "规则执行异常：AttributeError",
+        "why": "",
+        "evidence_ids": [
+          "cninfo:1225521951:p42",
+          "cninfo:1225521950:p11"
+        ],
+        "mitigations": [],
+        "to_verify": [
+          "检查该指标的数据质量后重试"
+        ],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225521951",
+          "title": "2026年半年度报告",
+          "pages": 234
+        },
+        {
+          "id": "cninfo:1225067796",
+          "title": "2025年年度审计报告",
+          "pages": 155
+        },
+        {
+          "id": "cninfo:1225067794",
+          "title": "2025年年度报告",
+          "pages": 298
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [
+        "批次 3 条：模型输出被 max_tokens 截断（思考模型推理占用输出预算），该次结果丢弃",
+        "批次 3 条：模型输出被 max_tokens 截断（思考模型推理占用输出预算），该次结果丢弃"
+      ],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "按行业“房地产业-房地产业”启用 realestate 行业规则包，普通企业规则中不适用项已自动跳过",
+        "净利润同比未计算：2026年中报 或 2025年中报 存在负利润，普通同比口径不适用",
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "5689d3564646",
+      "security": "601058.SH",
+      "name": "601058",
+      "generated_at": "2026-09-05T20:57:21",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 90,
+      "risk_count": 0,
+      "watch_count": 6,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 31,
+        "insufficient": 5,
+        "not_applicable": 16,
+        "completeness": 0.8611,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 12,
+            "数据不足": 0,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 3,
+            "数据不足": 2,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 123,
+        "announcement_fetched": 123,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 71,
+        "evidence_verified": 71,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "数据不足，无法判断",
+        "severity": "未定",
+        "strength": "部分证据支持",
+        "finding": "规则执行异常：AttributeError",
+        "why": "",
+        "evidence_ids": [
+          "cninfo:1225534298:p31",
+          "cninfo:1225201485:p6"
+        ],
+        "mitigations": [],
+        "to_verify": [
+          "检查该指标的数据质量后重试"
+        ],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225534298",
+          "title": "赛轮轮胎2026年半年度报告",
+          "pages": 201
+        },
+        {
+          "id": "cninfo:1225201485",
+          "title": "2025年度审计报告",
+          "pages": 131
+        },
+        {
+          "id": "cninfo:1225201460",
+          "title": "赛轮轮胎2025年年度报告",
+          "pages": 260
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "5b575e52b098",
+      "security": "600519.SH",
+      "name": "贵州茅台",
+      "generated_at": "2026-09-05T18:21:32",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 97,
+      "risk_count": 0,
+      "watch_count": 3,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 32,
+        "insufficient": 4,
+        "not_applicable": 16,
+        "completeness": 0.8889,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 12,
+            "数据不足": 0,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 94,
+        "announcement_fetched": 94,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 63,
+        "evidence_verified": 63,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "已解析 2 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
+        "why": "已排除半年报固定勾选项与标准审计报告中的持续经营免责句等模板化表述",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225114741",
+          "title": "贵州茅台2025年年度报告",
+          "pages": 143
+        },
+        {
+          "id": "cninfo:1225114733",
+          "title": "贵州茅台2025年年度报告（英文版）",
+          "pages": 194
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "61ff053ac3be",
+      "security": "00700.HK",
+      "name": "腾讯控股",
+      "generated_at": "2026-09-05T18:23:08",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 91,
+      "risk_count": 1,
+      "watch_count": 1,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 31,
+        "insufficient": 5,
+        "not_applicable": 16,
+        "completeness": 0.8611,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 9,
+            "数据不足": 3,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 8,
+            "数据不足": 0,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 5,
+            "数据不足": 1,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 169,
+        "announcement_fetched": 169,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 44,
+        "evidence_verified": 44,
+        "currencies": [
+          "HKD"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "hkexnews"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "已解析 2 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
+        "why": "已排除半年报固定勾选项与标准审计报告中的持续经营免责句等模板化表述",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 77.29 亿元，占货币资金 3.74%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "hkexnews:12297762",
+          "title": "中期報告 2026",
+          "pages": 122
+        },
+        {
+          "id": "hkexnews:12100025",
+          "title": "2025 年報",
+          "pages": 282
+        },
+        {
+          "id": "hkexnews:11842228",
+          "title": "騰訊控股有限公司 - 根據30,000,000,000美元之全球中期票據計劃刊發發售通函",
+          "pages": 705
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 HKD",
+        "港股报表科目与会计准则可能与 A 股不同，本组指标按原报表口径计算，未做准则转换"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "652f7c1497d9",
+      "security": "00700.HK",
+      "name": "腾讯控股",
+      "generated_at": "2026-09-05T18:26:10",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 100,
+      "risk_count": 0,
+      "watch_count": 0,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 31,
+        "insufficient": 5,
+        "not_applicable": 16,
+        "completeness": 0.8611,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 9,
+            "数据不足": 3,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 8,
+            "数据不足": 0,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 5,
+            "数据不足": 1,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 169,
+        "announcement_fetched": 169,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 44,
+        "evidence_verified": 44,
+        "currencies": [
+          "HKD"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "hkexnews"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "已解析 2 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
+        "why": "已排除半年报固定勾选项与标准审计报告中的持续经营免责句等模板化表述",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 77.29 亿元，占货币资金 3.74%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "hkexnews:12297762",
+          "title": "中期報告 2026",
+          "pages": 122
+        },
+        {
+          "id": "hkexnews:12100025",
+          "title": "2025 年報",
+          "pages": 282
+        },
+        {
+          "id": "hkexnews:11842228",
+          "title": "騰訊控股有限公司 - 根據30,000,000,000美元之全球中期票據計劃刊發發售通函",
+          "pages": 705
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 HKD",
+        "港股报表科目与会计准则可能与 A 股不同，本组指标按原报表口径计算，未做准则转换"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "69c46c7b8d9d",
+      "security": "600519.SH",
+      "name": "贵州茅台",
+      "generated_at": "2026-09-05T20:37:36",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 97,
+      "risk_count": 0,
+      "watch_count": 3,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 32,
+        "insufficient": 4,
+        "not_applicable": 16,
+        "completeness": 0.8889,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 12,
+            "数据不足": 0,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 94,
+        "announcement_fetched": 94,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 63,
+        "evidence_verified": 63,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "已解析 2 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
+        "why": "已排除半年报固定勾选项与标准审计报告中的持续经营免责句等模板化表述",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225114741",
+          "title": "贵州茅台2025年年度报告",
+          "pages": 143
+        },
+        {
+          "id": "cninfo:1225114733",
+          "title": "贵州茅台2025年年度报告（英文版）",
+          "pages": 194
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "6c688308a030",
+      "security": "603986.SH",
+      "name": "兆易创新",
+      "generated_at": "2026-09-05T21:54:45",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 95,
+      "risk_count": 0,
+      "watch_count": 4,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 32,
+        "insufficient": 4,
+        "not_applicable": 16,
+        "completeness": 0.8889,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 12,
+            "数据不足": 0,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 170,
+        "announcement_fetched": 170,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 67,
+        "evidence_verified": 67,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "已解析 2 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
+        "why": "已排除半年报固定勾选项与标准审计报告中的持续经营免责句等模板化表述",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225480384",
+          "title": "兆易创新2026年半年度报告",
+          "pages": 178
+        },
+        {
+          "id": "cninfo:1225061370",
+          "title": "兆易创新2025年度审计报告",
+          "pages": 140
+        },
+        {
+          "id": "cninfo:1225061352",
+          "title": "兆易创新2025年年度报告",
+          "pages": 219
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "7585f3ba3d68",
+      "security": "000002.SZ",
+      "name": "000002",
+      "generated_at": "2026-09-05T18:30:03",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 24,
+      "risk_count": 6,
+      "watch_count": 7,
+      "coverage": {
+        "applicable": 39,
+        "evaluated": 32,
+        "insufficient": 7,
+        "not_applicable": 13,
+        "completeness": 0.8205,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 11,
+            "数据不足": 1,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 4,
+            "不适用": 7
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 5,
+            "数据不足": 2,
+            "不适用": 3
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 184,
+        "announcement_fetched": 184,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 89,
+        "evidence_verified": 89,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "数据不足，无法判断",
+        "severity": "未定",
+        "strength": "部分证据支持",
+        "finding": "规则执行异常：AttributeError",
+        "why": "",
+        "evidence_ids": [
+          "cninfo:1225521951:p42",
+          "cninfo:1225521950:p11"
+        ],
+        "mitigations": [],
+        "to_verify": [
+          "检查该指标的数据质量后重试"
+        ],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225521951",
+          "title": "2026年半年度报告",
+          "pages": 234
+        },
+        {
+          "id": "cninfo:1225067796",
+          "title": "2025年年度审计报告",
+          "pages": 155
+        },
+        {
+          "id": "cninfo:1225067794",
+          "title": "2025年年度报告",
+          "pages": 298
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "按行业“房地产业-房地产业”启用 realestate 行业规则包，普通企业规则中不适用项已自动跳过",
+        "净利润同比未计算：2026年中报 或 2025年中报 存在负利润，普通同比口径不适用",
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "7cd4bc2a45ce",
+      "security": "600519.SH",
+      "name": "贵州茅台",
+      "generated_at": "2026-09-05T18:19:36",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 85,
+      "risk_count": 1,
+      "watch_count": 3,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 32,
+        "insufficient": 4,
+        "not_applicable": 16,
+        "completeness": 0.8889,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 12,
+            "数据不足": 0,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 94,
+        "announcement_fetched": 94,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 63,
+        "evidence_verified": 63,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "已解析 2 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
+        "why": "已排除半年报固定勾选项与标准审计报告中的持续经营免责句等模板化表述",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225114741",
+          "title": "贵州茅台2025年年度报告",
+          "pages": 143
+        },
+        {
+          "id": "cninfo:1225114733",
+          "title": "贵州茅台2025年年度报告（英文版）",
+          "pages": 194
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "9bbd84502c5a",
+      "security": "000001.SZ",
+      "name": "000001",
+      "generated_at": "2026-09-05T18:31:09",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 97,
+      "risk_count": 0,
+      "watch_count": 2,
+      "coverage": {
+        "applicable": 30,
+        "evaluated": 27,
+        "insufficient": 3,
+        "not_applicable": 22,
+        "completeness": 0.9,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 8,
+            "数据不足": 1,
+            "不适用": 6
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 11
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 91,
+        "announcement_fetched": 91,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 69,
+        "evidence_verified": 69,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "已解析 2 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
+        "why": "已排除半年报固定勾选项与标准审计报告中的持续经营免责句等模板化表述",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225475344",
+          "title": "2026年半年度报告",
+          "pages": 221
+        },
+        {
+          "id": "cninfo:1225022889",
+          "title": "2025年年度审计报告",
+          "pages": 181
+        },
+        {
+          "id": "cninfo:1225022887",
+          "title": "2025年年度报告",
+          "pages": 288
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "按行业“金融业-货币金融服务”启用 bank 行业规则包，普通企业规则中不适用项已自动跳过",
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "9cad1da7a1f2",
+      "security": "000002.SZ",
+      "name": "000002",
+      "generated_at": "2026-09-05T18:28:24",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 88,
+      "risk_count": 1,
+      "watch_count": 0,
+      "coverage": {
+        "applicable": 4,
+        "evaluated": 3,
+        "insufficient": 1,
+        "not_applicable": 48,
+        "completeness": 0.75,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 0,
+            "数据不足": 0,
+            "不适用": 15
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 1,
+            "数据不足": 1,
+            "不适用": 14
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 0,
+            "数据不足": 0,
+            "不适用": 6
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 0,
+            "数据不足": 0,
+            "不适用": 5
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 2,
+            "数据不足": 0,
+            "不适用": 8
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 184,
+        "announcement_fetched": 184,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 89,
+        "evidence_verified": 89,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "不适用",
+        "severity": "未定",
+        "strength": "部分证据支持",
+        "finding": "该检查项适用于 general 行业包，当前主体归类为 realestate",
+        "why": "",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "不适用",
+        "severity": "未定",
+        "strength": "部分证据支持",
+        "finding": "该检查项适用于 general 行业包，当前主体归类为 realestate",
+        "why": "",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225521951",
+          "title": "2026年半年度报告",
+          "pages": 234
+        },
+        {
+          "id": "cninfo:1225067796",
+          "title": "2025年年度审计报告",
+          "pages": 155
+        },
+        {
+          "id": "cninfo:1225067794",
+          "title": "2025年年度报告",
+          "pages": 298
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "按行业“房地产业-房地产业”启用 realestate 行业规则包，普通企业规则中不适用项已自动跳过",
+        "净利润同比未计算：2026年中报 或 2025年中报 存在负利润，普通同比口径不适用",
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "b0a4a44029bc",
+      "security": "601857.SH",
+      "name": "601857",
+      "generated_at": "2026-09-05T21:39:33",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 95,
+      "risk_count": 0,
+      "watch_count": 4,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 32,
+        "insufficient": 4,
+        "not_applicable": 16,
+        "completeness": 0.8889,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 12,
+            "数据不足": 0,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 99,
+        "announcement_fetched": 99,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 61,
+        "evidence_verified": 61,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "已解析 2 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
+        "why": "已排除半年报固定勾选项与标准审计报告中的持续经营免责句等模板化表述",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225535179",
+          "title": "中国石油天然气股份有限公司 2026 年半年度报告",
+          "pages": 169
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "b43173e94dd5",
+      "security": "00700.HK",
+      "name": "腾讯控股",
+      "generated_at": "2026-09-05T18:42:32",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 100,
+      "risk_count": 0,
+      "watch_count": 0,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 31,
+        "insufficient": 5,
+        "not_applicable": 16,
+        "completeness": 0.8611,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 9,
+            "数据不足": 3,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 8,
+            "数据不足": 0,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 5,
+            "数据不足": 1,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 169,
+        "announcement_fetched": 169,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 44,
+        "evidence_verified": 44,
+        "currencies": [
+          "HKD"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "hkexnews"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "已解析 2 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
+        "why": "已排除半年报固定勾选项与标准审计报告中的持续经营免责句等模板化表述",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 77.29 亿元，占货币资金 3.74%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "hkexnews:12297762",
+          "title": "中期報告 2026",
+          "pages": 122
+        },
+        {
+          "id": "hkexnews:12100025",
+          "title": "2025 年報",
+          "pages": 282
+        },
+        {
+          "id": "hkexnews:11842228",
+          "title": "騰訊控股有限公司 - 根據30,000,000,000美元之全球中期票據計劃刊發發售通函",
+          "pages": 705
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 HKD",
+        "港股报表科目与会计准则可能与 A 股不同，本组指标按原报表口径计算，未做准则转换"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "c82d77512182",
+      "security": "601058.SH",
+      "name": "赛轮轮胎",
+      "generated_at": "2026-09-05T21:23:01",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 90,
+      "risk_count": 0,
+      "watch_count": 6,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 31,
+        "insufficient": 5,
+        "not_applicable": 16,
+        "completeness": 0.8611,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 12,
+            "数据不足": 0,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 3,
+            "数据不足": 2,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 123,
+        "announcement_fetched": 123,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 71,
+        "evidence_verified": 71,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "数据不足，无法判断",
+        "severity": "未定",
+        "strength": "部分证据支持",
+        "finding": "规则执行异常：AttributeError",
+        "why": "",
+        "evidence_ids": [
+          "cninfo:1225534298:p31",
+          "cninfo:1225201485:p6"
+        ],
+        "mitigations": [],
+        "to_verify": [
+          "检查该指标的数据质量后重试"
+        ],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225534298",
+          "title": "赛轮轮胎2026年半年度报告",
+          "pages": 201
+        },
+        {
+          "id": "cninfo:1225201485",
+          "title": "2025年度审计报告",
+          "pages": 131
+        },
+        {
+          "id": "cninfo:1225201460",
+          "title": "赛轮轮胎2025年年度报告",
+          "pages": 260
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "decaf58909f3",
+      "security": "601058.SH",
+      "name": "赛轮轮胎",
+      "generated_at": "2026-09-05T21:31:12",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 90,
+      "risk_count": 0,
+      "watch_count": 6,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 31,
+        "insufficient": 5,
+        "not_applicable": 16,
+        "completeness": 0.8611,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 12,
+            "数据不足": 0,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 3,
+            "数据不足": 2,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 123,
+        "announcement_fetched": 123,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 71,
+        "evidence_verified": 71,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "数据不足，无法判断",
+        "severity": "未定",
+        "strength": "部分证据支持",
+        "finding": "规则执行异常：AttributeError",
+        "why": "",
+        "evidence_ids": [
+          "cninfo:1225534298:p31",
+          "cninfo:1225201485:p6"
+        ],
+        "mitigations": [],
+        "to_verify": [
+          "检查该指标的数据质量后重试"
+        ],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225534298",
+          "title": "赛轮轮胎2026年半年度报告",
+          "pages": 201
+        },
+        {
+          "id": "cninfo:1225201485",
+          "title": "2025年度审计报告",
+          "pages": 131
+        },
+        {
+          "id": "cninfo:1225201460",
+          "title": "赛轮轮胎2025年年度报告",
+          "pages": 260
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    },
+    {
+      "id": "efc62ae828db",
+      "security": "600519.SH",
+      "name": "贵州茅台",
+      "generated_at": "2026-09-05T18:36:52",
+      "status": "部分完成",
+      "rule_count": 52,
+      "score": 97,
+      "risk_count": 0,
+      "watch_count": 3,
+      "coverage": {
+        "applicable": 36,
+        "evaluated": 32,
+        "insufficient": 4,
+        "not_applicable": 16,
+        "completeness": 0.8889,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 15,
+            "已判断": 12,
+            "数据不足": 0,
+            "不适用": 3
+          },
+          "偿债能力": {
+            "总数": 16,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 8
+          },
+          "公司治理": {
+            "总数": 6,
+            "已判断": 6,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0
+          },
+          "经营行业": {
+            "总数": 10,
+            "已判断": 4,
+            "数据不足": 1,
+            "不适用": 5
+          }
+        }
+      },
+      "unbound_ids": [],
+      "render_error": "",
+      "db_json_equal": true,
+      "source_files_present": 25,
+      "scope": {
+        "fiscal_periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31"
+        ],
+        "latest_period": "2026-06-30",
+        "latest_period_label": "2026年中报",
+        "announcement_range": "2025-09-10 ~ 2026-09-05",
+        "announcement_total": 94,
+        "announcement_fetched": 94,
+        "documents_downloaded": 25,
+        "documents_parsed": 25,
+        "evidence_count": 63,
+        "evidence_verified": 63,
+        "currencies": [
+          "CNY"
+        ],
+        "statements": [
+          "balance",
+          "cashflow",
+          "income",
+          "indicator"
+        ],
+        "source": "cninfo"
+      },
+      "audit_result": {
+        "rule_id": "OP02",
+        "name": "审计意见类型",
+        "description": "是否非标意见",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "已解析 2 份审计/定期报告正文，未检出非标准审计意见的断言式表述",
+        "why": "已排除半年报固定勾选项与标准审计报告中的持续经营免责句等模板化表述",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "restricted_cash_result": {
+        "rule_id": "SV07",
+        "name": "受限资金占比过高",
+        "description": "现金可用性",
+        "status": "已覆盖资料中未发现明显异常",
+        "severity": "低",
+        "strength": "部分证据支持",
+        "finding": "受限资金 —，占货币资金 0.00%",
+        "why": "受限资金占比不高",
+        "evidence_ids": [],
+        "mitigations": [],
+        "to_verify": [],
+        "still_effective": null,
+        "ai_interpreted": false
+      },
+      "truncated_docs": [
+        {
+          "id": "cninfo:1225114741",
+          "title": "贵州茅台2025年年度报告",
+          "pages": 143
+        },
+        {
+          "id": "cninfo:1225114733",
+          "title": "贵州茅台2025年年度报告（英文版）",
+          "pages": 194
+        }
+      ],
+      "rules_without_evidence": [],
+      "ai_failures": [],
+      "html_has_svg": false,
+      "html_has_timeline": false,
+      "gaps": [
+        "计算基准：2026年中报（累计口径），币种 CNY"
+      ],
+      "gaps_displayed": []
+    }
+  ],
+  "routes": [
+    {
+      "path": "/",
+      "status": 200,
+      "size": 7265
+    },
+    {
+      "path": "/history",
+      "status": 200,
+      "size": 8277
+    },
+    {
+      "path": "/admin",
+      "status": 200,
+      "size": 4667
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "size": 99
+    },
+    {
+      "path": "/api/tasks/missing",
+      "status": 404,
+      "size": 28
+    },
+    {
+      "path": "/report/missing",
+      "status": 404,
+      "size": 28
+    },
+    {
+      "path": "/download/missing",
+      "status": 404,
+      "size": 31
+    },
+    {
+      "path": "/scan/6c688308a030",
+      "status": 200,
+      "size": 5337
+    },
+    {
+      "path": "/report/6c688308a030",
+      "status": 200,
+      "size": 53145
+    },
+    {
+      "path": "/download/6c688308a030",
+      "status": 200,
+      "size": 53145
+    }
+  ],
+  "repository": {
+    "head": "5be1083f20e8d113b6d034a72bc11bbb158fefaf",
+    "tracked_data_adapter_files": [],
+    "ignore_match": ".gitignore:2:data/\tapp/data/identity.py",
+    "clean_import_returncode": 1,
+    "clean_import_error": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import app.main\n  File \"/private/var/folders/6x/cgb2y8496073fdwgj_dkz35c0000gn/T/pailei-clean-checkout-f5su0k29/app/main.py\", line 25, in <module>\n    from app.data.eastmoney import EastmoneyClient\nModuleNotFoundError: No module named 'app.data'\n"
+  },
+  "tasks_by_status": [
+    {
+      "status": "失败",
+      "n": 2
+    },
+    {
+      "status": "运行",
+      "n": 1
+    },
+    {
+      "status": "部分完成",
+      "n": 17
+    }
+  ],
+  "report_download": {
+    "equal": false,
+    "equal_without_footer_time": true,
+    "online_sha256": "018db8cd12dea187e35055b1923795cfdd1acdb898bbe30b00e5dfb126749a8a",
+    "download_sha256": "6949477d1b32e48918c12777c30cdd3e37df6e4797a3934f5607effb9064cdc8"
+  }
+}

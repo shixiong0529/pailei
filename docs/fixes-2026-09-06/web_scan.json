@@ -1,0 +1,91 @@
+{
+  "task_id": "66b1fafbfe97",
+  "status": {
+    "ok": true,
+    "task_id": "66b1fafbfe97",
+    "status": "部分完成",
+    "stage": "报告生成",
+    "stage_index": 8,
+    "query": "00700.HK",
+    "secucode": "00700.HK",
+    "error": null,
+    "elapsed_ms": 76613,
+    "facts": 1233,
+    "documents": 168,
+    "has_report": true
+  },
+  "online_status": 200,
+  "download_status": 200,
+  "identical": true,
+  "rules": 52,
+  "report_version": "1.1",
+  "currency": "CNY",
+  "cash_equivalents_usable": 206930000000.0,
+  "summary": {
+    "highest_severity": "未定",
+    "risk_count": 0,
+    "watch_count": 0,
+    "insufficient_count": 6,
+    "top_findings": [],
+    "coverage": {
+      "applicable": 36,
+      "evaluated": 30,
+      "insufficient": 6,
+      "not_applicable": 16,
+      "completeness": 0.8333,
+      "by_dimension": {
+        "财务质量": {
+          "总数": 15,
+          "已判断": 9,
+          "数据不足": 3,
+          "不适用": 3
+        },
+        "偿债能力": {
+          "总数": 16,
+          "已判断": 8,
+          "数据不足": 0,
+          "不适用": 8
+        },
+        "公司治理": {
+          "总数": 6,
+          "已判断": 5,
+          "数据不足": 1,
+          "不适用": 0
+        },
+        "监管法律": {
+          "总数": 5,
+          "已判断": 5,
+          "数据不足": 0,
+          "不适用": 0
+        },
+        "经营行业": {
+          "总数": 10,
+          "已判断": 3,
+          "数据不足": 2,
+          "不适用": 5
+        }
+      }
+    }
+  },
+  "gaps": [
+    "168 份公告中仅下载最多 25 份原文，其余仅检查标题",
+    "《中期報告 2026》仅解析 120/122 页，剩余正文未覆盖",
+    "《2025 年報》仅解析 120/282 页，剩余正文未覆盖",
+    "以下港股报告期的计价币种未完成原文核实，相关金额判断受限：2024-06-30、2024-03-31、2023-09-30、2023-06-30、2023-03-31、2022-09-30、2022-06-30、2022-03-31、2021-09-30、2021-06-30、2021-03-31",
+    "6 项检查缺少判断依据，详情见数据不足汇总"
+  ],
+  "ai": {
+    "usage": {
+      "model": "glm-5.3-flash",
+      "available": true,
+      "reason": "",
+      "calls": 2,
+      "spent_cny": 0.0233,
+      "failures": []
+    },
+    "notes": [],
+    "verification": []
+  },
+  "network_records": 48,
+  "database_logs": 48
+}

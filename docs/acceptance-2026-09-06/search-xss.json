@@ -1,0 +1,4 @@
+{
+  "html": "<div class=\"suggest-item\"><span><span class=\"nm\"><img src=\"x\" onerror=\"document.body.dataset.auditXss='executed'\"></span>\n        <span class=\"cd\">600519.SH ·  · 代码精确匹配</span></span>\n        <span class=\"cd\">A股</span></div>",
+  "xss": "executed"
+}

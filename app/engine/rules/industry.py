@@ -32,8 +32,8 @@ def classify_industry(industry: str, name: str = "") -> str:
 
 
 def _bk01(ctx: RuleContext):
-    loans = ctx.facts.latest("bank_loan_advance")
-    deposits = ctx.facts.latest("bank_accept_deposit")
+    loans = ctx.current_fact("bank_loan_advance")
+    deposits = ctx.current_fact("bank_accept_deposit")
     indicator = ctx.metrics.get("bank_loan_deposit_ratio")
     if indicator is not None:
         finding = f"存贷比（数据源主要指标）= {fnum(indicator)}"
@@ -55,7 +55,7 @@ def _bk01(ctx: RuleContext):
 
 
 def _bk02(ctx: RuleContext):
-    nii = ctx.facts.latest("bank_net_interest_income")
+    nii = ctx.current_fact("bank_net_interest_income")
     rev = ctx.metrics.get("revenue") or ctx.metrics.get("operating_revenue")
     if nii is None or rev is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
@@ -96,7 +96,7 @@ def build_bank_rules() -> list[Rule]:
 
 
 def _in01(ctx: RuleContext):
-    premium = ctx.facts.latest("ins_earned_premium") or ctx.facts.latest("ins_premium_income")
+    premium = ctx.current_fact("ins_earned_premium") or ctx.current_fact("ins_premium_income")
     if premium is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, "未获取到已赚保费科目", "")
     return (RuleStatus.NORMAL, Severity.LOW,
@@ -105,8 +105,8 @@ def _in01(ctx: RuleContext):
 
 
 def _in02(ctx: RuleContext):
-    claims = ctx.facts.latest("ins_claims_expense")
-    premium = ctx.facts.latest("ins_earned_premium")
+    claims = ctx.current_fact("ins_claims_expense")
+    premium = ctx.current_fact("ins_earned_premium")
     if claims is None or premium is None or not premium.value:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
                 f"赔付支出 {fmoney(claims.value if claims else None)}，已赚保费 {fmoney(premium.value if premium else None)}",
@@ -145,7 +145,7 @@ def build_insurance_rules() -> list[Rule]:
 
 
 def _br01(ctx: RuleContext):
-    agent = ctx.facts.latest("broker_agent_trade_security")
+    agent = ctx.current_fact("broker_agent_trade_security")
     if agent is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
                 "未获取到代理买卖证券款科目（疑似非券商口径或未披露）", "")
@@ -154,7 +154,7 @@ def _br01(ctx: RuleContext):
 
 
 def _br02(ctx: RuleContext):
-    repo = ctx.facts.latest("broker_sell_repo_finasset")
+    repo = ctx.current_fact("broker_sell_repo_finasset")
     assets = ctx.metrics.get("total_assets")
     if repo is None or not assets:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
@@ -197,19 +197,24 @@ def _re01(ctx: RuleContext):
     """剔除预收款后的资产负债率（近似“三道红线”口径之一）。"""
     liab = ctx.metrics.get("total_liabilities")
     assets = ctx.metrics.get("total_assets")
-    advance = ctx.facts.latest("advance_receivables")
-    if liab is None or not assets:
+    period = ctx.metrics.latest_period
+    advance = ctx.facts.value("advance_receivables", period)
+    contract = ctx.facts.value("contract_liabilities", period)
+    if liab is None or assets is None or advance is None or contract is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
-                f"总负债 {fmoney(liab)}，总资产 {fmoney(assets)}", "")
-    adj_liab = liab - (advance.value if advance and advance.value else 0)
-    ratio = adj_liab / assets
+                "剔除预收款和合同负债的负债率无法计算：缺少同一期总负债、总资产、预收款或合同负债", "缺失科目不能视为零")
+    deduction = advance + contract
+    if assets <= deduction or liab < deduction:
+        return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, "调整后分母非正或负债口径不一致", "需核实预收款与合同负债是否重复")
+    ratio = (liab - deduction) / (assets - deduction)
     finding = (
-        f"剔除预收款后的资产负债率 = {fnum(ratio)}；"
-        f"（总负债 {fmoney(liab)} - 预收款项 {fmoney(advance.value if advance else None)}）/ 总资产 {fmoney(assets)}"
+        f"剔除预收款及合同负债后的资产负债率 = {fnum(ratio)}；"
+        f"（总负债 {fmoney(liab)} - 预收款 {fmoney(advance)} - 合同负债 {fmoney(contract)}）"
+        f" / （总资产 {fmoney(assets)} - 预收款 - 合同负债）"
     )
     if ratio > 0.70:
         return (RuleStatus.RISK, Severity.HIGH, finding,
-                "剔除预收后的负债率超过 70%，触及行业监管关注区间，再融资空间受限")
+                "调整后负债率超过本规则的 70% 关注阈值，需结合当前融资安排核实；不据此断言违反现行监管要求")
     if ratio > 0.60:
         return (RuleStatus.WATCH, Severity.MEDIUM, finding, "剔除预收后的负债率偏高")
     return (RuleStatus.NORMAL, Severity.LOW, finding, "剔除预收后的负债率处于常规区间")
@@ -222,7 +227,9 @@ def _re02(ctx: RuleContext):
     if cash is None or st is None or not st:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
                 f"货币资金 {fmoney(cash)}，短期借款 {fmoney(st)}", "")
-    usable = cash - (restricted or 0)
+    usable = ctx.metrics.get("usable_cash")
+    if usable is None:
+        return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, "可用现金口径缺失，无法判断短债覆盖", "")
     ratio = usable / st
     finding = (
         f"可自由使用现金 {fmoney(usable)} / 短期借款 {fmoney(st)} = {fnum(ratio, '倍')}"
@@ -251,7 +258,7 @@ def _re03(ctx: RuleContext):
 
 
 def _re04(ctx: RuleContext):
-    advance = ctx.facts.latest("advance_receivables")
+    advance = ctx.current_fact("advance_receivables")
     if advance is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
                 "未获取到预收款项/合同负债科目，无法判断销售回款前瞻", "")

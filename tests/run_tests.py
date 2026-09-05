@@ -471,7 +471,7 @@ class TestReportRendering(unittest.TestCase):
         payload = self._payload()
         payload["dimensions"] = [
             {"dimension": "财务质量", "results": [
-                {"status": "发现风险", "severity": "中", "rule_id": "FQ01", "name": "测试规则"},
+                {"status": "发现风险", "severity": "中", "rule_id": "FQ01", "name": "测试规则", "finding": "测试发现"},
             ]},
         ]
         html = render_inline(payload)
