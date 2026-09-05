@@ -1,0 +1,15 @@
+# 运行时数据（SQLite、下载原文、生成的报告）
+data/
+
+# 密钥与环境配置
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 系统与编辑器
+.DS_Store
+.idea/
+.vscode/

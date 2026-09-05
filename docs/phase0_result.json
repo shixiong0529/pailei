@@ -1,0 +1,670 @@
+[
+  {
+    "query": "600519",
+    "expected_market": "A",
+    "started_at": "2026-09-05T17:51:02",
+    "checks": {
+      "identity": {
+        "ok": true,
+        "selected": {
+          "code": "600519",
+          "market": "A",
+          "name": "贵州茅台",
+          "secucode": "600519.SH",
+          "org_code": "",
+          "org_name": "贵州茅台酒股份有限公司",
+          "exchange": "上海证券交易所",
+          "currency": "CNY",
+          "industry": "制造业-酒、饮料和精制茶制造业",
+          "listing_date": "2001-08-27",
+          "status": "",
+          "profile": {
+            "auditor": "天健会计师事务所(特殊普通合伙)",
+            "chairman": "陈华",
+            "legal_person": "陈华",
+            "controller": "贵州省人民政府国有资产监督管理委员会",
+            "org_type": "通用",
+            "former_names": "贵州茅台→G茅台",
+            "main_business": "茅台酒及系列酒的生产与销售",
+            "employees": 34992,
+            "register_place": "贵州",
+            "listing_board": "上交所主板"
+          }
+        },
+        "candidate_count": 1,
+        "candidates": [
+          "600519.SH 贵州茅台（代码精确匹配）"
+        ],
+        "company": {
+          "company_id": "A:贵州茅台酒股份有限公司",
+          "org_name": "贵州茅台酒股份有限公司",
+          "industry": "制造业-酒、饮料和精制茶制造业",
+          "country": "",
+          "securities": [
+            {
+              "code": "600519",
+              "market": "A",
+              "name": "贵州茅台",
+              "secucode": "600519.SH",
+              "org_code": "",
+              "org_name": "贵州茅台酒股份有限公司",
+              "exchange": "上海证券交易所",
+              "currency": "CNY",
+              "industry": "制造业-酒、饮料和精制茶制造业",
+              "listing_date": "2001-08-27",
+              "status": "",
+              "profile": {
+                "auditor": "天健会计师事务所(特殊普通合伙)",
+                "chairman": "陈华",
+                "legal_person": "陈华",
+                "controller": "贵州省人民政府国有资产监督管理委员会",
+                "org_type": "通用",
+                "former_names": "贵州茅台→G茅台",
+                "main_business": "茅台酒及系列酒的生产与销售",
+                "employees": 34992,
+                "register_place": "贵州",
+                "listing_board": "上交所主板"
+              }
+            }
+          ]
+        },
+        "ambiguous": false,
+        "message": "",
+        "notes": []
+      },
+      "finance": {
+        "fact_count": 609,
+        "periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31",
+          "2023-12-31",
+          "2023-09-30",
+          "2023-06-30",
+          "2023-03-31"
+        ],
+        "period_count": 18,
+        "latest_period": "2026-06-30",
+        "currencies": [
+          "CNY"
+        ],
+        "statements": {
+          "balance": {
+            "fact_count": 141,
+            "items": [
+              "accounts_payable",
+              "accounts_receivable",
+              "cash",
+              "fixed_assets",
+              "inventory",
+              "total_assets",
+              "total_equity",
+              "total_liabilities"
+            ]
+          },
+          "income": {
+            "fact_count": 270,
+            "items": [
+              "admin_expense",
+              "bank_net_fee_income",
+              "bank_net_interest_income",
+              "finance_expense",
+              "income_tax",
+              "net_profit_attributable",
+              "net_profit_deducted",
+              "operating_cost",
+              "operating_profit",
+              "pretax_profit",
+              "rd_expense_proxy",
+              "selling_expense",
+              "taxes_surcharges",
+              "total_operating_cost",
+              "total_revenue"
+            ]
+          },
+          "cashflow": {
+            "fact_count": 126,
+            "items": [
+              "capex",
+              "cash_from_sales",
+              "cash_net_change",
+              "cash_paid_to_staff",
+              "fcf",
+              "icf",
+              "ocf"
+            ]
+          },
+          "indicator": {
+            "fact_count": 72,
+            "items": [
+              "bps",
+              "eps_basic",
+              "operating_cashflow_per_share",
+              "total_operating_revenue"
+            ]
+          }
+        },
+        "errors": []
+      },
+      "announcements": {
+        "source": "cninfo",
+        "org_id": "gssh0600519",
+        "total": 96,
+        "fetched": 96,
+        "range": "2025-09-05 ~ 2026-09-05",
+        "gaps": [],
+        "type_distribution": {
+          "其他公告": 74,
+          "关联交易": 4,
+          "高管变动": 3,
+          "年报": 3,
+          "审计机构": 3,
+          "股东增持": 3,
+          "半年报": 2,
+          "审计": 2,
+          "一季报": 1,
+          "三季报": 1
+        }
+      },
+      "documents": {
+        "downloaded": 6,
+        "parsed": 6,
+        "failed": [],
+        "samples": [
+          {
+            "title": "贵州茅台2026年半年度报告",
+            "type": "半年报",
+            "publish_date": "2026-08-15",
+            "url": "http://static.cninfo.com.cn/finalpage/2026-08-15/1225475868.PDF",
+            "sha256": "0e10aa26be46b1cf",
+            "bytes": 832321,
+            "pages": 110,
+            "parsed_pages": 110,
+            "chars": 117834,
+            "truncated": false,
+            "evidence": {
+              "location": "第 16 页（共 110 页）",
+              "quote": "贵州茅台酒股份有限公司2026年半年度报告\n四、半年报审计情况\n□适用 √不适用\n五、上年年度报告非标准审计意见涉及事项的变化及处理情况\n□适用 √不适用\n六、破产重整相关事项\n□适用 √不适用\n七、重大诉讼、仲裁事项\n□本报告期公司有重大诉讼、仲裁事项 √本报告期公司无重大诉讼、仲裁事项\n八、上市公司及其董事、高级管理人员、控股股东、实际控制人涉嫌违法违规",
+              "fingerprint": "822a28f072ce2bb2",
+              "verified": true
+            }
+          },
+          {
+            "title": "贵州茅台2026年半年度报告摘要",
+            "type": "半年报",
+            "publish_date": "2026-08-15",
+            "url": "http://static.cninfo.com.cn/finalpage/2026-08-15/1225475860.PDF",
+            "sha256": "9ba031b34a7f05ca",
+            "bytes": 147934,
+            "pages": 4,
+            "parsed_pages": 4,
+            "chars": 2460,
+            "truncated": false,
+            "evidence": {
+              "location": "第 1 页（共 4 页）",
+              "quote": "贵州茅台酒股份有限公司2026年半年度报告摘要\n公司代码：600519 公司简称：贵州茅台\n贵州茅台酒股份有限公司\n2026 年半年度报告摘要",
+              "fingerprint": "b85876d3ee0f8aee",
+              "verified": true
+            }
+          },
+          {
+            "title": "贵州茅台2025年年度报告",
+            "type": "年报",
+            "publish_date": "2026-04-17",
+            "url": "http://static.cninfo.com.cn/finalpage/2026-04-17/1225114741.PDF",
+            "sha256": "474905deeaf0f875",
+            "bytes": 1082847,
+            "pages": 143,
+            "parsed_pages": 120,
+            "chars": 127917,
+            "truncated": true,
+            "evidence": {
+              "location": "第 39 页（共 143 页）",
+              "quote": "贵州茅台酒股份有限公司2025年年度报告\n(三)面临终止上市的情况和原因\n□适用 √不适用\n八、破产重整相关事项\n□适用 √不适用\n九、重大诉讼、仲裁事项\n□本年度公司有重大诉讼、仲裁事项 √本年度公司无重大诉讼、仲裁事项\n十、上市公司及其董事、高级管理人员、控股股东、实际控制人涉嫌违法违规、受到处罚及整改\n情况\n√适用 □不适用\n详见2026年3月14日披",
+              "fingerprint": "fca5dbbb2963585c",
+              "verified": true
+            }
+          },
+          {
+            "title": "贵州茅台2025年年度报告（英文版）",
+            "type": "年报",
+            "publish_date": "2026-04-17",
+            "url": "http://static.cninfo.com.cn/finalpage/2026-04-17/1225114733.PDF",
+            "sha256": "8bfe8b4e07540802",
+            "bytes": 1639516,
+            "pages": 194,
+            "parsed_pages": 120,
+            "chars": 263653,
+            "truncated": true,
+            "evidence": {
+              "location": "第 1 页（共 194 页）",
+              "quote": "ANNUALREPORT2025\nStockCode:600519 StockAbbr.:KweichowMoutai\nKWEICHOW MOUTAI CO., LTD.\nANNUAL REPORT 2025\n1 / 194",
+              "fingerprint": "c4d9f2c3d960c728",
+              "verified": true
+            }
+          },
+          {
+            "title": "贵州茅台2025年年度报告摘要",
+            "type": "年报",
+            "publish_date": "2026-04-17",
+            "url": "http://static.cninfo.com.cn/finalpage/2026-04-17/1225114731.PDF",
+            "sha256": "62c95632c49ae215",
+            "bytes": 220577,
+            "pages": 7,
+            "parsed_pages": 7,
+            "chars": 5666,
+            "truncated": false,
+            "evidence": {
+              "location": "第 5 页（共 7 页）",
+              "quote": "贵州茅台酒股份有限公司2025年年度报告摘要\n4、 股东情况\n4.1 报告期末及年报披露前一个月末的普通股股东总数、表决权恢复的优先股股东总数和持有特\n别表决权股份的股东总数及前10名股东情况\n单位: 股\n截至报告期末普通股股东总数（户） 255,892\n年度报告披露日前上一月末的普通股股东总数（户） 243,159\n前十名股东持股情况（不含通过转融通出借股",
+              "fingerprint": "3903997b08ac9ad3",
+              "verified": true
+            }
+          },
+          {
+            "title": "贵州茅台2025年度内部控制审计报告",
+            "type": "审计",
+            "publish_date": "2026-04-17",
+            "url": "http://static.cninfo.com.cn/finalpage/2026-04-17/1225114719.PDF",
+            "sha256": "827e9bded0512334",
+            "bytes": 4450795,
+            "pages": 9,
+            "parsed_pages": 9,
+            "chars": 1175,
+            "truncated": false,
+            "evidence": {
+              "location": "第 2 页（共 9 页）",
+              "quote": "内部控制审计报告\n天健审〔2026〕8-347号\n贵州茅台酒股份有限公司全体股东：\n按照《企业内部控制审计指引》及中国注册会计师执业准则的相关要求，我\n们审计了贵州茅台酒股份有限公司（以下简称贵州茅台公司）2025 年 12 月 31\n日的财务报告内部控制的有效性。\n一、企业对内部控制的责任\n按照《企业内部控制基本规范》《企业内部控制应用指引》以及《企业内部",
+              "fingerprint": "cdd1078314a73d97",
+              "verified": true
+            }
+          }
+        ]
+      }
+    },
+    "sources": {
+      "requests": {
+        "total": 13,
+        "ok": 13,
+        "failed": 0,
+        "bytes": 572269,
+        "elapsed_ms": 5156,
+        "hosts": [
+          "datacenter-web.eastmoney.com",
+          "searchapi.eastmoney.com",
+          "www.cninfo.com.cn"
+        ]
+      },
+      "hosts": [
+        "datacenter-web.eastmoney.com",
+        "searchapi.eastmoney.com",
+        "www.cninfo.com.cn"
+      ],
+      "elapsed_seconds": 23.4
+    },
+    "failures": [],
+    "gaps": []
+  },
+  {
+    "query": "00700",
+    "expected_market": "HK",
+    "started_at": "2026-09-05T17:51:25",
+    "checks": {
+      "identity": {
+        "ok": true,
+        "selected": {
+          "code": "00700",
+          "market": "HK",
+          "name": "腾讯控股",
+          "secucode": "00700.HK",
+          "org_code": "",
+          "org_name": "腾讯控股有限公司",
+          "exchange": "香港交易所",
+          "currency": "HKD",
+          "industry": "软件服务",
+          "listing_date": "2004-06-16",
+          "status": "",
+          "profile": {
+            "auditor": "罗兵咸永道会计师事务所",
+            "chairman": "马化腾",
+            "org_type": "一般企业",
+            "fiscal_year_end": "12-31",
+            "main_business": "主要提供增值服务(VAS)、网络广告服务以及金融科技及企业服务。该公司主要通过四个分部开展业务。增值服务分部主要从事提供网络游戏、视频号直播服务和视频付费会员服务等社交网络服务。网络广告分部主要从事媒体广告、社交及其他广告业务。金融科技及企业服务主要提供商业支付、金融科技及云服务。其他分部主要从事投资、为第三方制作与发行电影及电视节目、内容授权,商品销售及其他活动。",
+            "employees": 115927,
+            "register_place": "Cayman Islands 开曼群岛（英属）",
+            "former_names": ""
+          }
+        },
+        "candidate_count": 12,
+        "candidates": [
+          "00700.HK 腾讯控股（代码精确匹配）",
+          "007000.SZ 鹏华中债1-3年国开行债券指数A（代码前缀匹配）",
+          "007001.SZ 鹏华中债1-3年国开行债券指数C（代码前缀匹配）",
+          "007002.SZ 国融稳康债券（代码前缀匹配）",
+          "007005.SZ 中金新医药股票C（代码前缀匹配）",
+          "000700.SZ 模塑科技（模糊匹配）",
+          "000700.SZ Eusu Holdings（模糊匹配）",
+          "000700.SZ 宏利货币B（模糊匹配）"
+        ],
+        "company": {
+          "company_id": "HK:腾讯控股有限公司",
+          "org_name": "腾讯控股有限公司",
+          "industry": "软件服务",
+          "country": "",
+          "securities": [
+            {
+              "code": "00700",
+              "market": "HK",
+              "name": "腾讯控股",
+              "secucode": "00700.HK",
+              "org_code": "",
+              "org_name": "腾讯控股有限公司",
+              "exchange": "香港交易所",
+              "currency": "HKD",
+              "industry": "软件服务",
+              "listing_date": "2004-06-16",
+              "status": "",
+              "profile": {
+                "auditor": "罗兵咸永道会计师事务所",
+                "chairman": "马化腾",
+                "org_type": "一般企业",
+                "fiscal_year_end": "12-31",
+                "main_business": "主要提供增值服务(VAS)、网络广告服务以及金融科技及企业服务。该公司主要通过四个分部开展业务。增值服务分部主要从事提供网络游戏、视频号直播服务和视频付费会员服务等社交网络服务。网络广告分部主要从事媒体广告、社交及其他广告业务。金融科技及企业服务主要提供商业支付、金融科技及云服务。其他分部主要从事投资、为第三方制作与发行电影及电视节目、内容授权,商品销售及其他活动。",
+                "employees": 115927,
+                "register_place": "Cayman Islands 开曼群岛（英属）",
+                "former_names": ""
+              }
+            },
+            {
+              "code": "TCTZF",
+              "market": "A",
+              "name": "腾讯控股",
+              "secucode": "TCTZF.BJ",
+              "org_code": "",
+              "org_name": "腾讯控股",
+              "exchange": "未知交易所",
+              "currency": "CNY",
+              "industry": "软件服务",
+              "listing_date": "",
+              "status": "",
+              "profile": {}
+            }
+          ]
+        },
+        "ambiguous": true,
+        "message": "已按匹配度选择 00700.HK，另有 11 个候选",
+        "notes": [
+          "检测到可能的 A 股对应主体 TCTZF.BJ（腾讯控股），按名称启发式匹配，需人工核实"
+        ]
+      },
+      "finance": {
+        "fact_count": 1007,
+        "periods": [
+          "2026-06-30",
+          "2026-03-31",
+          "2025-12-31",
+          "2025-09-30",
+          "2025-06-30",
+          "2025-03-31",
+          "2024-12-31",
+          "2024-09-30",
+          "2024-06-30",
+          "2024-03-31",
+          "2023-12-31",
+          "2023-09-30",
+          "2023-06-30",
+          "2023-03-31"
+        ],
+        "period_count": 18,
+        "latest_period": "2026-06-30",
+        "currencies": [
+          "HKD"
+        ],
+        "statements": {
+          "balance": {
+            "fact_count": 359,
+            "items": [
+              "accounts_payable",
+              "accounts_receivable",
+              "cash",
+              "fixed_assets",
+              "intangible_assets",
+              "inventory",
+              "long_term_borrowings",
+              "minority_interest",
+              "net_assets",
+              "net_current_assets",
+              "prepayments_other_receivables",
+              "restricted_cash",
+              "short_term_borrowings",
+              "short_term_deposits",
+              "total_assets",
+              "total_assets_less_current_liab",
+              "total_current_assets",
+              "total_current_liabilities",
+              "total_equity",
+              "total_liabilities"
+            ]
+          },
+          "income": {
+            "fact_count": 252,
+            "items": [
+              "admin_expense",
+              "finance_cost",
+              "gross_profit",
+              "income_tax",
+              "interest_income",
+              "net_profit",
+              "net_profit_attributable",
+              "non_operating_items",
+              "operating_expenses",
+              "operating_profit",
+              "pretax_profit",
+              "revenue",
+              "selling_expense",
+              "total_revenue"
+            ]
+          },
+          "cashflow": {
+            "fact_count": 162,
+            "items": [
+              "begin_cash",
+              "capex",
+              "cash_net_change",
+              "cash_paid_investment",
+              "debt_repayment",
+              "dividend_paid",
+              "end_cash",
+              "fcf",
+              "icf",
+              "interest_paid",
+              "ocf",
+              "tax_paid"
+            ]
+          },
+          "indicator": {
+            "fact_count": 234,
+            "items": [
+              "ar_days",
+              "bps",
+              "current_ratio",
+              "debt_ratio",
+              "eps_basic",
+              "gross_margin",
+              "inventory_days",
+              "net_margin",
+              "ocf",
+              "ocf_per_share",
+              "operating_revenue",
+              "roa",
+              "roe_avg"
+            ]
+          }
+        },
+        "errors": []
+      },
+      "announcements": {
+        "source": "hkexnews",
+        "stock_id": "7609",
+        "total": 172,
+        "fetched": 172,
+        "range": "2025-09-05 ~ 2026-09-05",
+        "gaps": [],
+        "type_distribution": {
+          "股份回购": 122,
+          "其他公告": 38,
+          "高管变动": 6,
+          "年报": 2,
+          "业绩": 2,
+          "季报": 2
+        }
+      },
+      "documents": {
+        "downloaded": 6,
+        "parsed": 6,
+        "failed": [],
+        "samples": [
+          {
+            "title": "中期報告 2026",
+            "type": "年报",
+            "publish_date": "2026-08-25",
+            "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0825/2026082500557_c.pdf",
+            "sha256": "6231374bc3d7bd10",
+            "bytes": 5451089,
+            "pages": 122,
+            "parsed_pages": 120,
+            "chars": 80852,
+            "truncated": true,
+            "evidence": {
+              "location": "第 20 页（共 122 页）",
+              "quote": "相關的其他開支\n(c) 因收購產生的無形資產攤銷\n(d) 主要包括於聯營公司、合營公司、商譽及收購產生的其他無形資產的減值撥備╱（撥回）\n(e) 主要包括本集團SSV及CPP項目所產生的捐款及開支\n(f) 主要為本集團及╱或投資公司的非經常性合規相關成本及若干訴訟和解產生的費用\n(g) 非國際財務報告準則調整的所得稅影響\n所持投資\n於二零二六年六月三十日，本",
+              "fingerprint": "0dff7b1fa1dd5ae6",
+              "verified": true
+            }
+          },
+          {
+            "title": "2025 年報",
+            "type": "年报",
+            "publish_date": "2026-04-09",
+            "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0409/2026040901232_c.pdf",
+            "sha256": "d19f183452e9b8d0",
+            "bytes": 4428270,
+            "pages": 282,
+            "parsed_pages": 120,
+            "chars": 90088,
+            "truncated": true,
+            "evidence": {
+              "location": "第 23 页（共 282 页）",
+              "quote": "相關的其他開支\n(c) 因收購產生的無形資產攤銷\n(d) 主要包括於聯營公司、合營公司、商譽及收購產生的其他無形資產的減值撥備╱（撥回）\n(e) 主要包括本集團SSV及CPP項目所產生的捐款及開支\n(f) 主要為本集團及╱或投資公司的非經常性合規相關成本及若干訴訟和解產生的費用\n(g) 非國際財務報告準則調整的所得稅影響\n所持投資\n於二零二五年十二月三十一日",
+              "fingerprint": "ae92f6b457846361",
+              "verified": true
+            }
+          },
+          {
+            "title": "翌日披露報表",
+            "type": "股份回购",
+            "publish_date": "2026-09-04",
+            "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0904/2026090401403_c.pdf",
+            "sha256": "137efe54fcf17374",
+            "bytes": 128715,
+            "pages": 8,
+            "parsed_pages": 8,
+            "chars": 4054,
+            "truncated": false,
+            "evidence": {
+              "location": "第 1 页（共 8 页）",
+              "quote": "FF305\n翌日披露報表\n(股份發行人 ── 已發行股份或庫存股份變動、股份購回及/或在場内出售庫存股份)\n表格類別： 股票 狀態： 新提交\n公司名稱： 騰訊控股有限公司\n呈交日期： 2026年9月4日\n如上市發行人的已發行股份或庫存股份出現變動而須根據《香港聯合交易所有限公司（「香港聯交所」）證券上市規則》(「《主板上市規則》」)第13.25A條 / 《香",
+              "fingerprint": "e073850fb50e81e3",
+              "verified": true
+            }
+          },
+          {
+            "title": "截至二零二六年八月三十一日止之股份發行人的證券變動月報表",
+            "type": "其他公告",
+            "publish_date": "2026-09-04",
+            "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0904/2026090400751_c.pdf",
+            "sha256": "828f9673540d5034",
+            "bytes": 137210,
+            "pages": 10,
+            "parsed_pages": 10,
+            "chars": 3157,
+            "truncated": false,
+            "evidence": {
+              "location": "第 1 页（共 10 页）",
+              "quote": "FF301\n股份發行人及根據《上市規則》第十九B章上市的香港預託證券發行人的證券變動月報表\n截至月份: 2026年8月31日 狀態: 新提交\n致：香港交易及結算所有限公司\n公司名稱: 騰訊控股有限公司\n呈交日期: 2026年9月4日\nI. 法定/註冊股本變動\n1. 股份分類 普通股 股份類別 不適用 於香港聯交所上市 (註1) 是\n證券代號 (如上市) 00",
+              "fingerprint": "e2eec1a9329dde35",
+              "verified": true
+            }
+          },
+          {
+            "title": "翌日披露報表",
+            "type": "股份回购",
+            "publish_date": "2026-09-03",
+            "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0903/2026090301632_c.pdf",
+            "sha256": "dd9cb986328f6302",
+            "bytes": 128635,
+            "pages": 8,
+            "parsed_pages": 8,
+            "chars": 3986,
+            "truncated": false,
+            "evidence": {
+              "location": "第 1 页（共 8 页）",
+              "quote": "FF305\n翌日披露報表\n(股份發行人 ── 已發行股份或庫存股份變動、股份購回及/或在場内出售庫存股份)\n表格類別： 股票 狀態： 新提交\n公司名稱： 騰訊控股有限公司\n呈交日期： 2026年9月3日\n如上市發行人的已發行股份或庫存股份出現變動而須根據《香港聯合交易所有限公司（「香港聯交所」）證券上市規則》(「《主板上市規則》」)第13.25A條 / 《香",
+              "fingerprint": "c5bda434294ab19e",
+              "verified": true
+            }
+          },
+          {
+            "title": "翌日披露報表 - 已發行股份變動及股份購回",
+            "type": "股份回购",
+            "publish_date": "2026-09-02",
+            "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0902/2026090201812_c.pdf",
+            "sha256": "523570ad00d508b5",
+            "bytes": 132805,
+            "pages": 8,
+            "parsed_pages": 8,
+            "chars": 4133,
+            "truncated": false,
+            "evidence": {
+              "location": "第 1 页（共 8 页）",
+              "quote": "FF305\n翌日披露報表\n(股份發行人 ── 已發行股份或庫存股份變動、股份購回及/或在場内出售庫存股份)\n表格類別： 股票 狀態： 新提交\n公司名稱： 騰訊控股有限公司\n呈交日期： 2026年9月2日\n如上市發行人的已發行股份或庫存股份出現變動而須根據《香港聯合交易所有限公司（「香港聯交所」）證券上市規則》(「《主板上市規則》」)第13.25A條 / 《香",
+              "fingerprint": "70c7facaa20b6e74",
+              "verified": true
+            }
+          }
+        ]
+      }
+    },
+    "sources": {
+      "requests": {
+        "total": 57,
+        "ok": 57,
+        "failed": 0,
+        "bytes": 3018398,
+        "elapsed_ms": 17114,
+        "hosts": [
+          "datacenter-web.eastmoney.com",
+          "searchapi.eastmoney.com",
+          "www1.hkexnews.hk"
+        ]
+      },
+      "hosts": [
+        "datacenter-web.eastmoney.com",
+        "searchapi.eastmoney.com",
+        "www1.hkexnews.hk"
+      ],
+      "elapsed_seconds": 40.4
+    },
+    "failures": [],
+    "gaps": [
+      "检测到可能的 A 股对应主体 TCTZF.BJ（腾讯控股），按名称启发式匹配，需人工核实"
+    ]
+  }
+]

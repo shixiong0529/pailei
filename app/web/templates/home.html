@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="hero">
+  <h1>基本面排雷 Agent</h1>
+  <p>输入股票名称或代码，系统检索最新财报与公告，程序计算指标，输出带原始证据的风险报告。</p>
+
+  {% if not llm_ready %}
+  <div class="note" style="max-width:560px;margin:0 auto 18px;text-align:left">
+    <b>AI 解读步骤未启用</b>：{{ llm_reason }}。扫描仍会完整执行并输出程序计算的全部结论，
+    报告中会明确标注“未启用模型解读”。
+  </div>
+  {% endif %}
+
+  <div class="searchbox">
+    <input id="q" type="text" placeholder="例如：贵州茅台 / 600519 / 腾讯控股 / 00700"
+           autocomplete="off" autofocus>
+    <div class="suggest" id="suggest"></div>
+  </div>
+  <div class="chips">
+    <button class="chip" data-q="600519">贵州茅台 600519</button>
+    <button class="chip" data-q="00700">腾讯控股 00700</button>
+    <button class="chip" data-q="000333">美的集团 000333</button>
+    <button class="chip" data-q="00300">美的集团 00300（港股）</button>
+    <button class="chip" data-q="000001">平安银行 000001</button>
+  </div>
+  <div style="margin-top:22px">
+    <button class="btn" id="scan">开始扫描</button>
+    <label style="margin-left:14px;font-size:13px;color:var(--muted)">
+      <input type="checkbox" id="force"> 强制刷新（忽略 60 分钟内的缓存结果）
+    </label>
+  </div>
+  <div id="msg" style="margin-top:14px;color:var(--risk);font-size:13.5px"></div>
+</div>
+
+<div class="card">
+  <h2>最近扫描</h2>
+  {% if tasks %}
+  <table>
+    <thead><tr><th>查询</th><th>证券</th><th>状态</th><th>耗时</th><th>时间</th><th></th></tr></thead>
+    <tbody>
+    {% for t in tasks %}
+      <tr>
+        <td>{{ t.query }}</td>
+        <td class="mono">{{ t.secucode or '—' }}</td>
+        <td><span class="badge {{ t.status }}">{{ t.status }}</span></td>
+        <td>{% if t.elapsed_ms %}{{ '%.1f'|format(t.elapsed_ms/1000) }}s{% else %}—{% endif %}</td>
+        <td class="mono">{{ (t.created_at or '')[:16] }}</td>
+        <td>
+          {% if t.status in ['完成','部分完成'] %}
+            <a href="/report/{{ t.task_id }}">查看报告</a>
+          {% else %}
+            <a href="/scan/{{ t.task_id }}">查看进度</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">还没有扫描记录。输入一只股票开始。</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>这个产品做什么</h2>
+  <ul style="margin:0;padding-left:20px;color:var(--muted);font-size:14px">
+    <li>检索最近 5 个财年财报与近 12 个月公告，下载并解析原文</li>
+    <li>由程序计算指标并执行规则，AI 只解释已算出的异常</li>
+    <li>每条结论绑定到具体公告与页码，可展开查看原文片段与指纹</li>
+    <li>数据不足的检查项明确标注，绝不输出“未发现异常”</li>
+    <li>报告可在线阅读、打印，或下载为独立 HTML 文件离线查看</li>
+  </ul>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const q = document.getElementById('q');
+const box = document.getElementById('suggest');
+const msg = document.getElementById('msg');
+let timer = null, items = [], picked = '';
+
+q.addEventListener('input', () => {
+  clearTimeout(timer);
+  const v = q.value.trim();
+  if (!v) { box.innerHTML = ''; return; }
+  timer = setTimeout(async () => {
+    const r = await fetch('/api/suggest?q=' + encodeURIComponent(v)).then(x => x.json()).catch(() => null);
+    items = (r && r.items) || [];
+    box.innerHTML = '';
+    items.forEach((it, i) => {
+      const div = document.createElement('div');
+      div.className = 'suggest-item';
+      div.innerHTML = `<span><span class="nm">${it.name}</span>
+        <span class="cd">${it.secucode} · ${it.exchange} · ${it.match_reason}</span></span>
+        <span class="cd">${it.market === 'HK' ? '港股' : 'A股'}</span>`;
+      div.onclick = () => { picked = it.secucode; q.value = it.name + ' ' + it.secucode; box.innerHTML = ''; };
+      box.appendChild(div);
+    });
+  }, 180);
+});
+
+document.querySelectorAll('.chip').forEach(c => {
+  c.onclick = () => { q.value = c.dataset.q; picked = c.dataset.q; box.innerHTML = ''; };
+});
+
+document.getElementById('scan').onclick = async () => {
+  const value = (picked || q.value).trim();
+  if (!value) { msg.textContent = '请输入股票名称或代码'; return; }
+  msg.innerHTML = '<span class="spin"></span>正在创建扫描任务…';
+  const btn = document.getElementById('scan'); btn.disabled = true;
+  try {
+    const r = await fetch('/api/scan', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: value, force: document.getElementById('force').checked})
+    }).then(x => x.json());
+    if (!r.ok) throw new Error(r.detail || '创建失败');
+    location.href = '/scan/' + r.task_id;
+  } catch (e) {
+    msg.textContent = '创建任务失败：' + (e.message || e);
+    btn.disabled = false;
+  }
+};
+q.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('scan').click(); });
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}历史记录 · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>扫描历史</h2>
+  {% if tasks %}
+  <table>
+    <thead><tr><th>时间</th><th>查询</th><th>证券</th><th>状态</th><th>耗时</th><th>报告</th></tr></thead>
+    <tbody>
+    {% for t in tasks %}
+      <tr>
+        <td class="mono">{{ (t.created_at or '')[:16] }}</td>
+        <td>{{ t.query }}</td>
+        <td class="mono">{{ t.secucode or '—' }}</td>
+        <td><span class="badge {{ t.status }}">{{ t.status }}</span></td>
+        <td>{% if t.elapsed_ms %}{{ '%.1f'|format(t.elapsed_ms/1000) }}s{% else %}—{% endif %}</td>
+        <td>
+          {% if t.status in ['完成','部分完成'] %}
+            <a href="/report/{{ t.task_id }}">查看</a> ·
+            <a href="/download/{{ t.task_id }}">下载 HTML</a>
+          {% elif t.status == '失败' %}
+            <span style="color:var(--risk)">{{ (t.error or '失败')[:60] }}</span>
+          {% else %}
+            <a href="/scan/{{ t.task_id }}">进度</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">暂无记录</div>
+  {% endif %}
+</div>
+{% endblock %}

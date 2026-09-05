@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}运行状态 · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>运行配置</h2>
+  <table>
+    <tbody>
+    {% for k, v in settings_view.items() %}
+      <tr><th style="width:30%">{{ k }}</th><td>{{ v }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>数据源健康</h2>
+  {% if sources %}
+  <table>
+    <thead><tr><th>主机</th><th class="num">成功</th><th class="num">失败</th><th class="num">下载量</th><th>最近错误</th><th>更新时间</th></tr></thead>
+    <tbody>
+    {% for s in sources %}
+      <tr>
+        <td class="mono">{{ s.host }}</td>
+        <td>{{ s.ok_count }}</td>
+        <td>{% if s.fail_count %}<span style="color:var(--risk)">{{ s.fail_count }}</span>{% else %}0{% endif %}</td>
+        <td>{{ '%.1f'|format((s.bytes or 0)/1024) }} KB</td>
+        <td style="color:var(--muted)">{{ (s.last_error or '')[:90] }}</td>
+        <td class="mono">{{ (s.updated_at or '')[:16] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">暂无请求记录</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>模型消耗</h2>
+  <div class="statgrid">
+    <div class="stat"><div class="k">调用次数</div><div class="v">{{ llm.n or 0 }}</div></div>
+    <div class="stat"><div class="k">输入 tokens</div><div class="v">{{ '{:,}'.format(llm.tin or 0) }}</div></div>
+    <div class="stat"><div class="k">输出 tokens</div><div class="v">{{ '{:,}'.format(llm.tout or 0) }}</div></div>
+    <div class="stat"><div class="k">累计成本</div><div class="v">{{ '%.4f'|format(llm.cost or 0) }}<span style="font-size:12px;color:#94a3b8"> 元</span></div></div>
+  </div>
+  <p style="color:var(--muted);font-size:13px;margin-top:12px">
+    成本按 .env 中配置的单价估算；未配置单价时仅累计 token 量，不计算金额。
+  </p>
+</div>
+
+<div class="card">
+  <h2>任务统计</h2>
+  <table>
+    <thead><tr><th>状态</th><th class="num">数量</th></tr></thead>
+    <tbody>
+    {% for k, v in tasks.items() %}{% if k != 'recent_failures' %}
+      <tr><td><span class="badge {{ k }}">{{ k }}</span></td><td>{{ v }}</td></tr>
+    {% endif %}{% endfor %}
+    </tbody>
+  </table>
+  {% if tasks.recent_failures %}
+  <h3 style="font-size:14px;margin-top:18px">最近失败任务</h3>
+  <table>
+    <thead><tr><th>时间</th><th>查询</th><th>错误</th></tr></thead>
+    <tbody>
+    {% for f in tasks.recent_failures %}
+      <tr><td class="mono">{{ (f.created_at or '')[:16] }}</td><td>{{ f.query }}</td>
+        <td style="color:var(--muted)">{{ (f.error or '')[:140] }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

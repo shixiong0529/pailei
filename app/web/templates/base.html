@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ app_name }}{% endblock %}</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/"><span class="logo">排</span>{{ app_name }}</a>
+    <div class="nav-links">
+      <a href="/">首页</a>
+      <a href="/history">历史记录</a>
+      <a href="/admin">运行状态</a>
+    </div>
+  </div>
+</nav>
+<main class="main">
+{% block content %}{% endblock %}
+</main>
+<footer class="foot">
+  数据来自东方财富数据中心、巨潮资讯网、港交所披露易公开接口 · 报告不构成投资建议
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>
