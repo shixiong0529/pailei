@@ -111,6 +111,13 @@ class Settings:
     max_pdf_downloads: int = 25
     scan_timeout_seconds: int = 900
 
+    # 事件历史追溯（V1.2）：仅未解除重要事件触发，受资源上限约束
+    trace_back_max_years: int = 3
+    trace_back_max_queries: int = 3
+    trace_back_max_announcements: int = 30
+    trace_back_max_downloads: int = 5
+    trace_back_max_seconds: float = 60.0
+
     # 功能开关
     enable_network: bool = True
     enable_pdf_parse: bool = True
@@ -168,6 +175,11 @@ def load_settings() -> Settings:
         max_pdf_pages=_i("MAX_PDF_PAGES", 120),
         max_pdf_downloads=_i("MAX_PDF_DOWNLOADS", 25),
         scan_timeout_seconds=_i("SCAN_TIMEOUT_SECONDS", 900),
+        trace_back_max_years=_i("TRACE_BACK_MAX_YEARS", 3),
+        trace_back_max_queries=_i("TRACE_BACK_MAX_QUERIES", 3),
+        trace_back_max_announcements=_i("TRACE_BACK_MAX_ANNOUNCEMENTS", 30),
+        trace_back_max_downloads=_i("TRACE_BACK_MAX_DOWNLOADS", 5),
+        trace_back_max_seconds=_f("TRACE_BACK_MAX_SECONDS", 60.0),
         enable_network=_b("ENABLE_NETWORK", True),
         enable_pdf_parse=_b("ENABLE_PDF_PARSE", True),
         enable_llm=_b("ENABLE_LLM", True),

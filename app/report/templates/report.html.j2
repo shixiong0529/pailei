@@ -354,6 +354,28 @@ section{scroll-margin-top:16px}
     {% endif %}
   {% endfor %}
 
+  {% if lifecycles %}
+  <h3>事件生命周期</h3>
+  <p class="hint">同一事项的多份披露合并为一个生命周期，不重复计数；「已解除」仅在存在后续正式披露时标注。</p>
+  <table class="responsive-table" aria-label="事件生命周期">
+    <thead><tr><th style="width:14%">首次披露</th><th style="width:14%">最新进展</th><th>事项</th><th style="width:10%">公告数</th><th style="width:14%">状态</th></tr></thead>
+    <tbody>
+    {% for l in lifecycles %}
+      <tr>
+        <td data-label="首次披露" class="mono">{{ l.first_occurred }}</td>
+        <td data-label="最新进展" class="mono">{{ l.latest_date }}</td>
+        <td data-label="事项"><span class="tag">{{ l.category }}</span><b>{{ l.title }}</b></td>
+        <td data-label="公告数">{{ l.announcement_count }}</td>
+        <td data-label="状态">
+          {% if l.resolved %}<span style="color:#16a34a">已解除{% if l.resolution_basis %}：{{ l.resolution_basis }}{% if l.resolution_date %}（{{ l.resolution_date }}）{% endif %}{% endif %}</span>
+          {% else %}<span style="color:#b45309">仍未解除</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
   {% if timeline %}
   <h3>已确认事件时间线</h3>
   <p class="hint">已确认事件均通过原文复核，绑定至少一条可回溯证据；同一事项的进展在后续版本合并展示。</p>
@@ -364,8 +386,8 @@ section{scroll-margin-top:16px}
       <tr>
         <td data-label="日期" class="mono">{{ e.occurred_date }}</td>
         <td data-label="类型"><span class="tag">{{ e.category }}</span></td>
-        <td data-label="事件"><b>{{ e.title }}</b>{% if e.summary %}<br><span style="color:#6b7280">{{ e.summary }}</span>{% endif %}
-          {% if e.resolved is sameas true %}<br><span style="color:#16a34a">已解除{% if e.resolution_note %}：{{ e.resolution_note }}{% endif %}</span>{% endif %}</td>
+        <td data-label="事件"><b>{{ e.title }}</b>{% if e.lifecycle_stage %}<span class="tag">{{ e.lifecycle_stage }}</span>{% endif %}{% if e.summary %}<br><span style="color:#6b7280">{{ e.summary }}</span>{% endif %}
+          {% if e.resolved is sameas true %}<br><span style="color:#16a34a">已解除{% if e.resolution_basis %}：{{ e.resolution_basis }}{% if e.resolution_date %}（{{ e.resolution_date }}）{% endif %}{% elif e.resolution_note %}：{{ e.resolution_note }}{% endif %}</span>{% endif %}</td>
         <td data-label="证据">{% if e.evidence_ids %}{{ e.evidence_ids|length }} 条{% else %}—{% endif %}</td>
       </tr>
     {% endfor %}

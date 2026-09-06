@@ -134,7 +134,13 @@ CREATE TABLE IF NOT EXISTS risk_events (
     source_doc_id TEXT,
     resolved     INTEGER,
     resolution_note TEXT,
-    evidence_ids TEXT
+    evidence_ids TEXT,
+    dedup_key    TEXT,
+    occurrence_order INTEGER,
+    lifecycle_stage TEXT,
+    related_doc_ids TEXT,
+    resolution_basis TEXT,
+    resolution_date TEXT
 );
 
 CREATE TABLE IF NOT EXISTS reports (
@@ -215,6 +221,14 @@ def init_db() -> None:
         for table, columns in {
             "financial_facts": {"period_start": "TEXT", "audited": "INTEGER", "consolidated": "INTEGER"},
             "fetch_logs": {"record_id": "TEXT"},
+            "risk_events": {
+                "dedup_key": "TEXT",
+                "occurrence_order": "INTEGER",
+                "lifecycle_stage": "TEXT",
+                "related_doc_ids": "TEXT",
+                "resolution_basis": "TEXT",
+                "resolution_date": "TEXT",
+            },
         }.items():
             existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
             for name, kind in columns.items():
@@ -405,6 +419,12 @@ def save_risk_events(task_id: str, events: Iterable[Any]) -> int:
             task_id, e.event_id, e.title, e.occurred_date, e.category, e.summary,
             e.source_doc_id, None if e.resolved is None else int(e.resolved),
             e.resolution_note, json.dumps(e.evidence_ids, ensure_ascii=False),
+            getattr(e, "dedup_key", "") or "",
+            getattr(e, "occurrence_order", 0) or 0,
+            getattr(e, "lifecycle_stage", "") or "",
+            json.dumps(getattr(e, "related_doc_ids", []) or [], ensure_ascii=False),
+            getattr(e, "resolution_basis", "") or "",
+            getattr(e, "resolution_date", "") or "",
         )
         for e in events
     ]
@@ -413,8 +433,10 @@ def save_risk_events(task_id: str, events: Iterable[Any]) -> int:
         if rows:
             conn.executemany(
                 "INSERT INTO risk_events (task_id, event_id, title, occurred_date, category,"
-                " summary, source_doc_id, resolved, resolution_note, evidence_ids)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?)",
+                " summary, source_doc_id, resolved, resolution_note, evidence_ids,"
+                " dedup_key, occurrence_order, lifecycle_stage, related_doc_ids,"
+                " resolution_basis, resolution_date)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 rows,
             )
     return len(rows)

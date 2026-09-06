@@ -42,6 +42,7 @@ from app.data.identity import IdentityResolver
 from app.data.pdftext import build_evidence, parse_pdf
 from app.engine.metrics import compute_metrics
 from app.engine.normalize import FactSet
+from app.engine import lifecycle
 from app.engine.runner import (
     EngineOutput,
     RuleContext,
@@ -242,6 +243,14 @@ class ScanPipeline:
         # ---------- 6. 专项阅读 ----------
         self._checkpoint(Stage.READ)
         events, pending_clues = self._extract_events(docs, parsed_docs, evidence_store)
+        # V1.2 事件生命周期：把同一事项的多份披露串成生命周期，补充解除依据与关联公告。
+        events = lifecycle.enrich_events(events, docs)
+        trace = self._plan_trace_back(events, start)
+        if trace["triggered"] and self._time_left() > 0:
+            docs, _tb_gaps = self._trace_back_history(security, trace, docs)
+            self._append_evidence(security, docs, evidence_store, parsed_docs)
+            events = lifecycle.enrich_events(events, docs)
+        lifecycles = lifecycle.build_lifecycles(events)
         ai_interpret(output, ctx, self.llm)
 
         # ---------- 7. 核验 ----------
@@ -277,6 +286,8 @@ class ScanPipeline:
             output=output,
             events=events,
             pending_clues=pending_clues,
+            lifecycles=lifecycles,
+            trace_back=trace,
             plan=plan,
             industry_pack=industry_pack,
             started=started,
@@ -289,6 +300,7 @@ class ScanPipeline:
         version = db.save_report(self.task_id, html_path, json_path, payload)
         db.save_rule_results(self.task_id, [o.to_result() for o in output.outcomes])
         db.save_risk_events(self.task_id, events)
+        db.save_documents(self.task_id, docs)
         db.save_evidences(self.task_id, evidence_store.items.values())
         db.save_fetch_logs(self.task_id, self.http.records)
 
@@ -375,33 +387,50 @@ class ScanPipeline:
             security.org_name or security.name, security.code, security.market
         )
         for doc in docs:
-            if not doc.local_path:
-                continue
-            if not settings.enable_pdf_parse:
-                continue
-            if self._time_left() <= 0:
-                self.gaps.append("任务期限已到，停止剩余 PDF 解析")
-                break
-            parsed = parse_pdf(doc.local_path, timeout=min(60, self._time_left()))
-            if parsed.truncated:
-                self.gaps.append(f"《{doc.title}》仅解析 {len(parsed.pages)}/{parsed.page_count} 页，剩余正文未覆盖")
-            parsed.doc_id = doc.doc_id
-            parsed_docs[doc.doc_id] = parsed
-            doc.parsed = not parsed.error
-            doc.page_count = parsed.page_count
-            doc.text_excerpt = parsed.pages[0][1][:200] if parsed.pages else ""
-            if parsed.error:
-                doc.parse_error = parsed.error
-                self.gaps.append(f"《{doc.title}》解析失败：{parsed.error}")
-                continue
-            ev = build_evidence(doc, parsed, base_keywords)
-            if ev:
-                store.add(ev, doc_type=doc.doc_type)
-            for topic, keywords in TOPIC_KEYWORDS.items():
-                topic_ev = build_evidence(doc, parsed, keywords)
-                if topic_ev:
-                    store.add(topic_ev, topics=[topic], doc_type=doc.doc_type)
+            self._add_doc_evidence(doc, base_keywords, store, parsed_docs)
         return store, parsed_docs
+
+    def _append_evidence(
+        self, security, docs: list[DisclosureDoc], store: EvidenceStore, parsed_docs: dict[str, Any]
+    ) -> None:
+        """为按需追溯新增的公告补充证据（追加到既有 store，不重建）。"""
+        base_keywords = evidence_keywords(
+            security.org_name or security.name, security.code, security.market
+        )
+        for doc in docs:
+            if doc.doc_id in parsed_docs:
+                continue
+            self._add_doc_evidence(doc, base_keywords, store, parsed_docs)
+
+    def _add_doc_evidence(
+        self, doc: DisclosureDoc, base_keywords: list[str], store: EvidenceStore, parsed_docs: dict[str, Any]
+    ) -> None:
+        if not doc.local_path:
+            return
+        if not settings.enable_pdf_parse:
+            return
+        if self._time_left() <= 0:
+            self.gaps.append("任务期限已到，停止剩余 PDF 解析")
+            return
+        parsed = parse_pdf(doc.local_path, timeout=min(60, self._time_left()))
+        if parsed.truncated:
+            self.gaps.append(f"《{doc.title}》仅解析 {len(parsed.pages)}/{parsed.page_count} 页，剩余正文未覆盖")
+        parsed.doc_id = doc.doc_id
+        parsed_docs[doc.doc_id] = parsed
+        doc.parsed = not parsed.error
+        doc.page_count = parsed.page_count
+        doc.text_excerpt = parsed.pages[0][1][:200] if parsed.pages else ""
+        if parsed.error:
+            doc.parse_error = parsed.error
+            self.gaps.append(f"《{doc.title}》解析失败：{parsed.error}")
+            return
+        ev = build_evidence(doc, parsed, base_keywords)
+        if ev:
+            store.add(ev, doc_type=doc.doc_type)
+        for topic, keywords in TOPIC_KEYWORDS.items():
+            topic_ev = build_evidence(doc, parsed, keywords)
+            if topic_ev:
+                store.add(topic_ev, topics=[topic], doc_type=doc.doc_type)
 
     def _extract_events(
         self, docs: list[DisclosureDoc], parsed: dict[str, Any], store: Any = None
@@ -568,6 +597,131 @@ class ScanPipeline:
         )
         return event, None
 
+    def _plan_trace_back(self, events: list[RiskEvent], current_start: date) -> dict[str, Any]:
+        """为未解除的重要事件规划按需历史追溯范围（确定性，不发起网络）。"""
+        limits = lifecycle.TraceBackLimits(
+            max_queries=settings.trace_back_max_queries,
+            max_announcements=settings.trace_back_max_announcements,
+            max_downloads=settings.trace_back_max_downloads,
+            max_seconds=settings.trace_back_max_seconds,
+        )
+        triggered = lifecycle.should_trace_back(events)
+        plan = lifecycle.trace_back_plan(
+            events, end=current_start, max_years=settings.trace_back_max_years, limits=limits
+        )
+        return {
+            "triggered": triggered,
+            "categories": plan.categories,
+            "range": {"start": plan.start, "end": plan.end},
+            "limits": {
+                "max_queries": limits.max_queries,
+                "max_announcements": limits.max_announcements,
+                "max_downloads": limits.max_downloads,
+                "max_seconds": limits.max_seconds,
+            },
+            "result": "待执行" if triggered else "无需追溯",
+        }
+
+    def _trace_back_history(
+        self, security, trace: dict[str, Any], docs: list[DisclosureDoc]
+    ) -> tuple[list[DisclosureDoc], list[str]]:
+        """按需向前追溯：在正常扫描窗口之前，按事件类别定向补齐历史公告。
+
+        仅当 trace["triggered"] 为真、网络启用且时间充足时执行；受查询/公告/下载/耗时上限约束，
+        达到上限记录缺口，不静默省略。
+        """
+        if not trace.get("triggered") or not settings.enable_network:
+            return docs, []
+        categories = set(trace.get("categories") or [])
+        if not categories:
+            return docs, []
+        limits = trace.get("limits") or {}
+        rng = trace.get("range") or {}
+        try:
+            start = date.fromisoformat(rng.get("start", ""))
+            end = date.fromisoformat(rng.get("end", ""))
+        except ValueError:
+            self.gaps.append("历史追溯日期区间无效，已跳过")
+            return docs, []
+        if start >= end:
+            return docs, []
+
+        max_ann = int(limits.get("max_announcements", 30))
+        max_dl = int(limits.get("max_downloads", 5))
+        max_seconds = float(limits.get("max_seconds", 60.0))
+        deadline = min(self.deadline, time.time() + max_seconds)
+
+        existing = {d.doc_id for d in docs}
+        extra: list[DisclosureDoc] = []
+        gaps: list[str] = []
+        fetched = 0
+        try:
+            if security.market is Market.HK:
+                with HkexnewsClient(self.http) as hk:
+                    stock_id = hk.resolve_stock_id(security.code)
+                    if not stock_id:
+                        self.gaps.append("历史追溯：无法定位港股 stock_id，已跳过")
+                        return docs, []
+                    out = hk.announcements(security.code, stock_id, start, end, max_items=max_ann)
+                    fetched = out.get("fetched", 0)
+                    extra = [d for d in out.get("docs", []) if d.doc_type in categories or self._trace_match(d.title, categories)]
+                    ordered = self._order_docs(extra)
+                    for doc in ordered:
+                        if self._time_left() < 60 or time.time() >= deadline:
+                            gaps.append("历史追溯达到耗时上限，停止下载剩余原文")
+                            break
+                        if sum(1 for d in extra if d.local_path) >= max_dl:
+                            gaps.append(f"历史追溯达到下载上限 {max_dl} 份")
+                            break
+                        hk.download(doc)
+            else:
+                with CninfoClient(self.http) as cn:
+                    org = cn.resolve_org(security.code)
+                    if not org:
+                        self.gaps.append("历史追溯：无法定位 A 股主体标识，已跳过")
+                        return docs, []
+                    out = cn.announcements(security.code, org[0], start, end, max_items=max_ann, column=org[1])
+                    fetched = out.get("fetched", 0)
+                    extra = [d for d in out.get("docs", []) if d.doc_type in categories or self._trace_match(d.title, categories)]
+                    ordered = self._order_docs(extra)
+                    for doc in ordered:
+                        if self._time_left() < 60 or time.time() >= deadline:
+                            gaps.append("历史追溯达到耗时上限，停止下载剩余原文")
+                            break
+                        if sum(1 for d in extra if d.local_path) >= max_dl:
+                            gaps.append(f"历史追溯达到下载上限 {max_dl} 份")
+                            break
+                        cn.download(doc)
+        except FetchError as exc:
+            gaps.append(f"历史追溯未完成：{exc}")
+
+        # 去重：只保留正常扫描窗口之外的新公告。
+        new_docs = [d for d in extra if d.doc_id and d.doc_id not in existing]
+        for d in new_docs:
+            if d.parse_error:
+                gaps.append(f"历史追溯《{d.title}》原文获取失败：{d.parse_error}")
+        if fetched and not new_docs:
+            gaps.append(f"历史追溯接口返回 {fetched} 条，但无新增公告（可能已覆盖或类别不匹配）")
+        if new_docs:
+            self.notes.append(f"已按需向前追溯 {len(new_docs)} 份历史公告（类别：{'、'.join(sorted(categories))}）")
+        self.gaps.extend(gaps)
+        return docs + new_docs, gaps
+
+    @staticmethod
+    def _trace_match(title: str, categories: set[str]) -> bool:
+        """按标题关键词判断公告是否属于待追溯类别（客户端过滤，接口无类别参数）。"""
+        keywords = {
+            "监管处罚": ("处罚", "處罰", "立案", "行政处罚"),
+            "监管调查": ("调查", "調查", "立案"),
+            "监管问询": ("问询", "問詢", "关注函", "监管函"),
+            "诉讼": ("诉讼", "訴訟", "仲裁"),
+            "资产冻结": ("冻结", "凍結"),
+            "股权质押": ("质押", "質押"),
+            "上市地位": ("退市", "停牌", "复牌", "复牌", "除牌"),
+        }
+        t = title or ""
+        return any(any(k in t for k in keywords.get(c, ())) for c in categories)
+
     def _reverify_evidence(self, store: EvidenceStore, parsed: dict[str, Any]) -> int:
         """对每条证据做原文复核，未通过的标记为 unverified，报告必须可见。"""
         from app.data.pdftext import verify_evidence
@@ -596,6 +750,8 @@ class ScanPipeline:
         evidence_store: EvidenceStore = kw["evidence_store"]
         events = kw["events"]
         pending_clues = kw.get("pending_clues", [])
+        lifecycles = kw.get("lifecycles", [])
+        trace_back = kw.get("trace_back")
 
         highest = Severity.UNKNOWN
         for o in output.outcomes:
@@ -694,6 +850,8 @@ class ScanPipeline:
                 if by_dimension.get(d)
             ],
             "timeline": [e.to_dict() for e in events],
+            "lifecycles": lifecycles,
+            "trace_back": trace_back,
             "pending_clues": pending_clues,
             "mitigations": self._collect_mitigations(output),
             "gaps": list(dict.fromkeys(self.gaps)),

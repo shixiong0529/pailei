@@ -163,6 +163,12 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
             for key, value in {"evidence_ids": [], "mitigations": [], "to_verify": [], "still_effective": None,
                                "ai_interpreted": False, "strength": "线索待核实", "why": ""}.items():
                 result.setdefault(key, value)
+    # V1.2 生命周期字段：旧报告或测试载荷的时间线条目可能缺少这些键，渲染前补齐默认。
+    for ev in payload.get("timeline") or []:
+        for key, value in {"lifecycle_stage": "", "summary": "", "resolved": None,
+                           "resolution_note": "", "resolution_basis": "", "resolution_date": "",
+                           "evidence_ids": []}.items():
+            ev.setdefault(key, value)
     trends = payload.get("trends") or {}
     chart_blocks = []
     for key, title, color in TREND_SPECS:
@@ -221,6 +227,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
         "dimensions": dimensions,
         "dimension_desc": _dimension_desc,
         "timeline": payload.get("timeline") or [],
+        "lifecycles": payload.get("lifecycles") or [],
         "pending_clues": payload.get("pending_clues") or [],
         "mitigations": payload.get("mitigations") or [],
         "gaps": payload.get("gaps") or [],

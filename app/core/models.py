@@ -258,6 +258,13 @@ class RiskEvent:
     resolved: Optional[bool] = None
     resolution_note: str = ""
     evidence_ids: list[str] = field(default_factory=list)
+    # ---- V1.2 生命周期字段（事件生命周期与按需历史追溯）----
+    dedup_key: str = ""                        # 同一事项的确定性关联键（案件号/公告编号/标题关键词）
+    occurrence_order: int = 0                  # 该事项第几次披露（1=首次发生）
+    lifecycle_stage: str = ""                  # 首次发生 / 最新进展 / 已解除
+    related_doc_ids: list[str] = field(default_factory=list)   # 同事项关联公告
+    resolution_basis: str = ""                 # 解除依据（后续正式披露标题）
+    resolution_date: str = ""                  # 解除依据披露日期
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
