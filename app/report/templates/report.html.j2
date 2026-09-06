@@ -202,7 +202,8 @@ section{scroll-margin-top:16px}
     {% if industry_pack and industry_pack != 'general' %} · 适用 {{ industry_pack }} 行业规则包{% endif %}
   </div>
   <div class="sub data-basis" style="margin-top:4px">
-    数据基础：{{ data_scope.announcement_range or '近 12 个月' }}公告 {{ data_scope.announcement_fetched or 0 }} 条 ·
+    数据基础：{{ data_scope.announcement_range or '近 12 个月' }}公告 {{ data_scope.announcement_fetched or 0 }} 条{% if data_scope.announcement_traced %}
+    （基础扫描 {{ data_scope.announcement_base_fetched }} 条 + 历史追溯 {{ data_scope.announcement_traced }} 条）{% endif %} ·
     原文 {{ data_scope.documents_downloaded or 0 }} 份 · 证据 {{ data_scope.evidence_count or 0 }} 条
     （{{ data_scope.evidence_verified or 0 }} 条通过原文复核）
   </div>
@@ -216,7 +217,7 @@ section{scroll-margin-top:16px}
 <section>
   <h2>报告目录</h2>
   <ul class="toc">
-    <li><span class="no">01</span><a href="#sec-01">风险总览</a><span class="desc">这家公司风险有多大、扣了多少分、最严重的几条问题</span></li>
+    <li><span class="no">01</span><a href="#sec-01">风险总览</a><span class="desc">风险等级、信号密度、覆盖情况和最严重的几条问题</span></li>
     <li><span class="no">02</span><a href="#sec-02">逐项检查结果</a><span class="desc">财务、偿债、治理、监管、经营 5 个角度的逐条结论</span></li>
     <li><span class="no">03</span><a href="#sec-03">问题详情与原文</a><span class="desc">每条结论的详细理由和公告原文（默认折叠）</span></li>
     <li><span class="no">04</span><a href="#sec-04">数据来源与算法</a><span class="desc">数据从哪来、怎么算的、有什么局限</span></li>
@@ -393,7 +394,7 @@ section{scroll-margin-top:16px}
 
   {% if timeline %}
   <h3>已确认事件时间线</h3>
-  <p class="hint">已确认事件均通过原文复核，绑定至少一条可回溯证据；同一事项的进展在后续版本合并展示。</p>
+  <p class="hint">AI 候选事件只有通过原文复核并绑定证据后才会进入本表；程序按公告类型确定的事件以来源公告为依据。同一事项的多份进展合并展示。</p>
   <table class="responsive-table" aria-label="已确认事件时间线">
     <thead><tr><th style="width:16%">日期</th><th style="width:16%">类型</th><th>事件</th><th style="width:12%">证据</th></tr></thead>
     <tbody>
@@ -403,7 +404,7 @@ section{scroll-margin-top:16px}
         <td data-label="类型"><span class="tag">{{ e.category }}</span></td>
         <td data-label="事件"><b>{{ e.title }}</b>{% if e.lifecycle_stage %}<span class="tag">{{ e.lifecycle_stage }}</span>{% endif %}{% if e.summary %}<br><span style="color:#6b7280">{{ e.summary }}</span>{% endif %}
           {% if e.resolved is sameas true %}<br><span style="color:#16a34a">已解除{% if e.resolution_basis %}：{{ e.resolution_basis }}{% if e.resolution_date %}（{{ e.resolution_date }}）{% endif %}{% elif e.resolution_note %}：{{ e.resolution_note }}{% endif %}</span>{% endif %}</td>
-        <td data-label="证据">{% if e.evidence_ids %}{{ e.evidence_ids|length }} 条{% else %}—{% endif %}</td>
+        <td data-label="证据">{% if e.evidence_ids %}{{ e.evidence_ids|length }} 条{% elif e.source_doc_id %}{% set source_doc = documents_by_id.get(e.source_doc_id) %}{% if source_doc and safe_url(source_doc.url) %}<a href="{{ safe_url(source_doc.url) }}" target="_blank" rel="noopener">来源公告</a>{% else %}<span class="mono">{{ e.source_doc_id }}</span>{% endif %}{% else %}—{% endif %}</td>
       </tr>
     {% endfor %}
     </tbody>

@@ -183,6 +183,44 @@ class EventLayeringTests(unittest.TestCase):
         self.assertEqual(formal[0].source_doc_id, "doc1")
         self.assertEqual(clues, [])
 
+    def test_routine_auditor_documents_are_not_risk_events(self):
+        docs = [
+            _doc("renew", "关于续聘会计师事务所的公告", "审计机构"),
+            _doc("review", "审计委员会对会计师事务所履职情况评估报告", "审计机构"),
+        ]
+        pipe = ScanPipeline("event_test")
+        pipe.llm = SimpleNamespace(available=False)
+        try:
+            formal, clues = pipe._extract_events(docs, {}, EvidenceStore())
+        finally:
+            pipe.close()
+        self.assertEqual(formal, [])
+        self.assertEqual(clues, [])
+
+    def test_auditor_change_and_going_concern_remain_risk_events(self):
+        docs = [
+            _doc("change", "关于变更会计师事务所的公告", "审计机构"),
+            _doc("concern", "审计报告带有持续经营重大不确定性段落的专项说明", "审计机构"),
+        ]
+        pipe = ScanPipeline("event_test")
+        pipe.llm = SimpleNamespace(available=False)
+        try:
+            formal, _ = pipe._extract_events(docs, {}, EvidenceStore())
+        finally:
+            pipe.close()
+        self.assertEqual({event.source_doc_id for event in formal}, {"change", "concern"})
+
+    def test_traditional_chinese_auditor_change_remains_risk_event(self):
+        docs = [_doc("change-hk", "核數師辭任及委任新核數師公告", "审计机构")]
+        pipe = ScanPipeline("event_test")
+        pipe.llm = SimpleNamespace(available=False)
+        try:
+            formal, clues = pipe._extract_events(docs, {}, EvidenceStore())
+        finally:
+            pipe.close()
+        self.assertEqual([event.source_doc_id for event in formal], ["change-hk"])
+        self.assertEqual(clues, [])
+
 
 class EventReportTests(unittest.TestCase):
     def test_pending_clues_section_only_when_present(self):
@@ -214,6 +252,20 @@ class EventReportTests(unittest.TestCase):
         p["pending_clues"] = []
         html = render_inline(p)
         self.assertIn("已确认事件时间线", html)
+
+    def test_deterministic_event_renders_source_announcement_link(self):
+        from app.report.render import render_inline
+        from tests.test_validation import _base_payload
+
+        p = _base_payload()
+        p["timeline"] = [{"event_id": "evt:doc1", "title": "处罚", "occurred_date": "2026-01-01",
+                          "category": "监管处罚", "summary": "s", "source_doc_id": "doc1",
+                          "resolved": False, "evidence_ids": []}]
+        p["documents"] = [{"doc_id": "doc1", "url": "https://example.org/doc1.pdf"}]
+        html = render_inline(p)
+        self.assertIn("来源公告", html)
+        self.assertIn("https://example.org/doc1.pdf", html)
+        self.assertIn("程序按公告类型确定的事件以来源公告为依据", html)
 
 
 if __name__ == "__main__":

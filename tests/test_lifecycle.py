@@ -57,6 +57,20 @@ class DedupKeyTests(unittest.TestCase):
         keys = {lifecycle.dedup_key(t) for t in CASE_TITLES}
         self.assertEqual(len(keys), 1)
 
+    def test_resolution_action_uses_same_title_key(self):
+        self.assertEqual(
+            lifecycle.dedup_key("关于公司全部资产司法冻结的公告"),
+            lifecycle.dedup_key("关于公司全部资产解除司法冻结的公告"),
+        )
+        self.assertEqual(
+            lifecycle.dedup_key("关于控股股东股份质押的公告"),
+            lifecycle.dedup_key("关于控股股东股份解除质押的公告"),
+        )
+        self.assertEqual(
+            lifecycle.dedup_key("关于公司全部资产冻结的公告"),
+            lifecycle.dedup_key("关于公司全部资产解除冻结的公告"),
+        )
+
 
 class LifecycleTests(unittest.TestCase):
     def test_merge_progress_announcements_into_one_lifecycle(self):
@@ -105,6 +119,25 @@ class LifecycleTests(unittest.TestCase):
         enriched = lifecycle.enrich_events(events, docs)
         self.assertIsNot(enriched[0].resolved, True)
 
+    def test_same_disclosure_cannot_resolve_itself(self):
+        event = _evt("e1", "关于续聘会计师事务所的公告", "2026-04-17", "审计机构")
+        event.source_doc_id = "d1"
+        docs = [_doc("d1", event.title, "2026-04-17")]
+        enriched = lifecycle.enrich_events([event], docs)
+        self.assertIsNot(enriched[0].resolved, True, "事件源公告不得同时充当后续解除依据")
+        self.assertEqual(enriched[0].resolution_basis, "")
+
+    def test_later_freeze_release_resolves_event_without_case_number(self):
+        event = _evt("e1", "关于公司全部资产司法冻结的公告", "2026-01-02", "资产冻结")
+        event.source_doc_id = "d1"
+        docs = [
+            _doc("d1", event.title, "2026-01-02", "资产冻结"),
+            _doc("d2", "关于公司全部资产解除司法冻结的公告", "2026-04-03", "冻结解除"),
+        ]
+        enriched = lifecycle.enrich_events([event], docs)
+        self.assertTrue(enriched[0].resolved)
+        self.assertEqual(enriched[0].resolution_date, "2026-04-03")
+
     def test_no_double_counting(self):
         events = [
             _evt("e1", CASE_TITLES[0], "2026-01-01", "监管处罚"),
@@ -124,6 +157,18 @@ class LifecycleTests(unittest.TestCase):
         enriched = lifecycle.enrich_events(events, docs)
         self.assertEqual({e.lifecycle_stage for e in enriched}, {"首次发生", "最新进展"})
         self.assertEqual({e.occurrence_order for e in enriched}, {1, 2})
+
+    def test_stage_order_is_chronological_even_when_input_is_reverse_sorted(self):
+        latest = _evt("e2", CASE_TITLES[1], "2026-03-01", "监管处罚")
+        first = _evt("e1", CASE_TITLES[0], "2026-01-01", "监管处罚")
+        docs = [_doc("d1", CASE_TITLES[0], "2026-01-01"),
+                _doc("d2", CASE_TITLES[1], "2026-03-01")]
+        enriched = lifecycle.enrich_events([latest, first], docs)
+        by_id = {e.event_id: e for e in enriched}
+        self.assertEqual(by_id["e1"].lifecycle_stage, "首次发生")
+        self.assertEqual(by_id["e1"].occurrence_order, 1)
+        self.assertEqual(by_id["e2"].lifecycle_stage, "最新进展")
+        self.assertEqual(by_id["e2"].occurrence_order, 2)
 
 
 class TraceBackTests(unittest.TestCase):

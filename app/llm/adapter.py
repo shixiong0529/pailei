@@ -288,6 +288,8 @@ class LLMAdapter:
         batches: list[Any],
         build_prompt: Any,
         step: str,
+        *,
+        max_tokens: int | None = None,
     ) -> LLMResult:
         """分批调用并合并结果。
 
@@ -307,12 +309,12 @@ class LLMAdapter:
             if len(user) > self.config.max_input_chars:
                 failures.append(f"批次 {len(batch)} 条超出输入长度限制，未截断结构化资料")
                 continue
-            estimated = self._estimate(system, user)
+            estimated = self._estimate(system, user, max_tokens)
             jobs.append((batch, system, user, estimated))
 
         def invoke(job: tuple[list[Any], str, str, float]) -> LLMResult:
             try:
-                return self.chat_json(job[1], job[2], step=step)
+                return self.chat_json(job[1], job[2], step=step, max_tokens=max_tokens)
             except Exception as exc:  # 单批异常不得中断其他独立批次
                 msg = f"批次 {len(job[0])} 条：{type(exc).__name__}: {exc}"[:200]
                 self._add_failure(msg)
@@ -424,7 +426,10 @@ class LLMAdapter:
             return system, user
 
         batches = [docs_context[i : i + 10] for i in range(0, len(docs_context), 10)]
-        return self._run_batched(batches, build, "events")
+        # 思考模型的推理 token 与 JSON 共用输出额度。真实样本在 4k 上限曾把事件 JSON
+        # 截断；仅为事件抽取预留更充足的输出空间，不减少公告、片段或校验步骤。
+        event_max_tokens = max(self.config.max_output_tokens, 8000)
+        return self._run_batched(batches, build, "events", max_tokens=event_max_tokens)
 
     def verify(self, verification_context: dict[str, Any]) -> LLMResult:
         """独立核验：检查结论与证据在主体、时间、语义上是否对应。"""

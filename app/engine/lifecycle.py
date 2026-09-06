@@ -21,16 +21,16 @@ from app.core.models import RiskEvent
 
 # 各事件类别的“解除/进展”关键词（用于在后续披露中寻找解除依据）。
 RESOLUTION_HINTS: dict[str, tuple[str, ...]] = {
-    "监管问询": ("回复", "回函", "答复"),
-    "监管处罚": ("整改", "结案"),
-    "监管调查": ("整改", "结案"),
-    "诉讼": ("和解", "结案", "撤诉", "判决"),
-    "资产冻结": ("解除冻结",),
-    "股权质押": ("解除质押",),
-    "质押冻结": ("解除质押", "解除冻结"),
-    "审计机构": ("聘任", "续聘", "改聘"),
-    "盈利警告": ("年度报告", "业绩快报"),
-    "上市地位": ("复牌",),
+    "监管问询": ("回复", "回函", "答复", "回覆", "答覆"),
+    "监管处罚": ("整改", "结案", "結案"),
+    "监管调查": ("整改", "结案", "結案"),
+    "诉讼": ("和解", "结案", "撤诉", "判决", "結案", "撤訴", "判決"),
+    "资产冻结": ("解除冻结", "解除司法冻结", "解除凍結", "解除司法凍結"),
+    "股权质押": ("解除质押", "解除質押"),
+    "质押冻结": ("解除质押", "解除冻结", "解除司法冻结", "解除質押", "解除凍結", "解除司法凍結"),
+    "审计机构": ("聘任", "续聘", "改聘", "續聘"),
+    "盈利警告": ("年度报告", "业绩快报", "年度報告", "業績快報"),
+    "上市地位": ("复牌", "復牌"),
     "财务更正": ("更正",),
 }
 
@@ -62,6 +62,11 @@ def _core_keywords(title: str) -> str:
     与首次披露归为同一事项（无案件号/公告编号时使用）。
     """
     t = re.sub(r"[（(][^）)]*[）)]", "", title or "")
+    # 解除公告与原事项应落入同一个确定性标题键，否则在缺少案件号/公告编号时，
+    # “资产冻结”永远无法被后续“解除冻结”公告关闭。
+    t = re.sub(r"(?:解除)?(?:司法)?冻结", "冻结", t)
+    t = re.sub(r"(?:解除)?(?:司法)?凍結", "凍結", t)
+    t = t.replace("解除质押", "质押").replace("解除質押", "質押")
     t = re.sub(r"(关于|的补充|的进展|的提示性|的公告|公告|补充|进展|提示性)", "", t)
     t = re.sub(r"\d+", "", t)
     t = re.sub(r"[\s，。；：、\-—]", "", t)
@@ -90,7 +95,7 @@ def _is_resolution_title(doc_title: str, category: str) -> bool:
 def detect_resolution(event: RiskEvent, docs: list[Any]) -> tuple[bool, str, str]:
     """判断事件是否已解除，返回 (resolved, basis, date)。
 
-    仅当存在日期不早于事件、且确定性关联键一致、且标题命中该类别解除关键词的后续披露时，
+    仅当存在日期晚于事件、且确定性关联键一致、且标题命中该类别解除关键词的后续披露时，
     才判定为已解除。时间经过或模型判断不构成解除依据。
     """
     key = dedup_key(event.title)
@@ -98,7 +103,11 @@ def detect_resolution(event: RiskEvent, docs: list[Any]) -> tuple[bool, str, str
     for doc in docs:
         title = getattr(doc, "title", "") or ""
         pub = getattr(doc, "publish_date", "") or ""
-        if not pub or pub < (event.occurred_date or ""):
+        # 公告不能把自己当作后续解除依据；发布日期只有天级精度，因此要求严格晚于事件日，
+        # 避免同日的原始公告或重复记录被误判为“后续披露”。
+        if (getattr(doc, "doc_id", "") or "") == (event.source_doc_id or ""):
+            continue
+        if not pub or pub <= (event.occurred_date or ""):
             continue
         if dedup_key(title) != key:
             continue
@@ -120,13 +129,22 @@ def enrich_events(events: list[RiskEvent], docs: list[Any]) -> list[RiskEvent]:
     for doc in docs:
         key_to_docs.setdefault(dedup_key(getattr(doc, "title", "") or ""), []).append(doc)
 
-    seen: dict[str, int] = {}
+    # 输入时间线通常按日期倒序展示，生命周期序号必须独立按时间正序计算。
+    # 否则最新公告会被错误标成“首次发生”，最早公告反而成为“最新进展”。
+    grouped: dict[str, list[RiskEvent]] = {}
     for ev in events:
         key = dedup_key(ev.title)
         ev.dedup_key = key
-        seen[key] = seen.get(key, 0) + 1
-        ev.occurrence_order = seen[key]
-        ev.lifecycle_stage = "首次发生" if ev.occurrence_order == 1 else "最新进展"
+        grouped.setdefault(key, []).append(ev)
+    for group in grouped.values():
+        for index, ev in enumerate(
+            sorted(group, key=lambda item: (item.occurred_date or "", item.event_id)), start=1
+        ):
+            ev.occurrence_order = index
+            ev.lifecycle_stage = "首次发生" if index == 1 else "最新进展"
+
+    for ev in events:
+        key = ev.dedup_key
         ev.related_doc_ids = sorted(
             {d.doc_id for d in key_to_docs.get(key, []) if getattr(d, "doc_id", "")}
         )

@@ -1,10 +1,10 @@
 # 开发状态记录
 
-> **2026-09-06 V1.2 可信度改造完成**：报告版本升至 V1.2，规则版本保持 1.1。按 `V1.2_DEVELOPMENT_HANDOVER.md` 的阶段 0—7 顺序开发、逐阶段提交并全量测试，三个真实样本（600519/00700/000002.SZ）全部复验通过。原有 147 项测试保持通过，新增 V1.2 各阶段测试 103 项，共 250 项。完整变更、迁移、样本与回滚见 [V1.2 实施报告](docs/V1.2_IMPLEMENTATION_REPORT.md)。
+> **2026-09-06 V1.2 可信度改造完成**：报告版本升至 V1.2，规则版本保持 1.1。按 `V1.2_DEVELOPMENT_HANDOVER.md` 的阶段 0—7 顺序开发、逐阶段提交并全量测试，三个真实样本（600519/00700/000002.SZ）全部复验通过。原有 147 项测试保持通过，V1.2 与复验修复测试 114 项，共 261 项。完整变更、迁移、样本与回滚见 [V1.2 实施报告](docs/V1.2_IMPLEMENTATION_REPORT.md)。
 
 > **2026-09-06 修复更新**：诊断 A01—A31 的程序修复已实施，规则版本 1.1。原有 58 项 + 验收回归 53 项 + 独立边界测试 36 项通过，共 147 项。完整变更、测试证据及限制见 [修复与回归记录](docs/FIX_REPORT_2026-09-06.md)。下文原有 2026-09-05 结果是历史记录；以本更新和修复记录为准。旧报告须重新扫描才会使用新规则。
 
-> **2026-09-06 性能更新**：独立模型批次改为最多 2 路并行，并增加并发预算与 SQLite 用量写入保护。`00700.HK` 正式 Web 强制重扫由 120.030 秒降至 61.383 秒；1,234 条事实、168 条公告、25 份 PDF、50/50 证据、52 项规则及缺口完全对齐。详见 [耗时实测与优化记录](docs/PERFORMANCE_OPTIMIZATION_2026-09-06.md)。
+> **2026-09-06 最终复验更新**：修复生命周期自行解除、例行审计公告风险化、持续经营结论矛盾、事件来源展示、基础扫描与历史追溯数量口径，并缓存成功的长 PDF 截断页段。按用户最终选择保留醒目的 A—E 评级徽章。261 项测试全过；真实报告腾讯 30.2s、茅台 69.5s、万科 69.4s。详见 [验收结果](docs/V1.2_ACCEPTANCE_RESULT.md) 与 [耗时实测](docs/PERFORMANCE_OPTIMIZATION_2026-09-06.md)。
 
 用途：跨会话接续开发。每完成一个阶段更新一次，记录已完成、验证结果、剩余工作、阻塞项与下一步。
 
@@ -24,15 +24,15 @@
 |---|---|---|---|
 | 0 | 固定验收集（≥20 家）+ 语义差异工具 | `app/validation/` | test_validation 16 项 |
 | 1 | 模型结果缓存与可复现（含并发去重） | `app/llm/adapter.py`、`app/core/db.py` | test_llm_cache 14 项 |
-| 2 | AI 候选事件与正式事件分层（证据绑定 + 原文复核） | `app/engine/pipeline.py` | test_events 10 项 |
-| 3 | 事件生命周期与按需历史追溯 | `app/engine/lifecycle.py` | test_lifecycle 16 项 |
-| 4 | 任务状态 / 覆盖等级 / 评分表达（移除 A-E） | `app/core/models.py`、`app/engine/gaps.py` | test_status 11 项 |
-| 5 | 资料选择（类别配额）与目标章节解析 | `app/engine/selection.py`、`app/data/pdftext.py` | test_selection 10 项 |
+| 2 | AI 候选事件与正式事件分层（证据绑定 + 原文复核） | `app/engine/pipeline.py` | test_events 14 项 |
+| 3 | 事件生命周期与按需历史追溯 | `app/engine/lifecycle.py` | test_lifecycle 20 项 |
+| 4 | 任务状态 / 覆盖等级 / 评分表达（保留醒目 A-E 徽章） | `app/core/models.py`、`app/engine/gaps.py` | test_status 11 项 |
+| 5 | 资料选择（类别配额）与目标章节解析 | `app/engine/selection.py`、`app/data/pdftext.py` | test_selection 11 项 |
 | 6 | 行业规则能力口径（unsupported_source） | `app/engine/rules/`、`app/engine/runner.py` | test_capability 13 项 |
 | 7 | 运行诊断（阶段耗时/缓存命中）与存储清理 | `app/core/db.py`、`app/core/storage.py`、`scripts/cleanup.py` | test_diagnostics 13 项 |
 
 三个真实样本复验（task_id 见实施报告）：600519（0 风险/3 关注/5 数据不足）、00700（0/0/6）、
-000002.SZ（3 风险/8 关注/9 数据不足），均生成可打开报告，覆盖等级「一般缺口」（无关键缺口）。
+000002.SZ（3 风险/9 关注/9 数据不足），均生成可打开报告，覆盖等级「一般缺口」（无关键缺口）。
 
 ## 〇、2026-09-05 晚间迭代（LLM 接入 + 报告重构）
 

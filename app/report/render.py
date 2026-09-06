@@ -147,7 +147,8 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     defaults = {
         "security": {"exchange": "", "industry": "", "currency": ""},
         "scan": {"started_at": "", "status": "", "timed_out": False, "coverage_level": ""},
-        "data_scope": {"announcement_range": "", "announcement_fetched": 0, "documents_downloaded": 0,
+        "data_scope": {"announcement_range": "", "announcement_fetched": 0,
+                       "announcement_base_fetched": 0, "announcement_traced": 0, "documents_downloaded": 0,
                        "evidence_count": 0, "evidence_verified": 0, "latest_period_label": "", "latest_period": ""},
         "summary": {"risk_count": 0, "watch_count": 0, "insufficient_count": 0, "highest_severity": "未定", "top_findings": []},
         "method": {"disclaimer": "", "limitations": []},
@@ -168,7 +169,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
         for key, value in {"event_id": "", "title": "", "occurred_date": "", "category": "",
                            "lifecycle_stage": "", "summary": "", "resolved": None,
                            "resolution_note": "", "resolution_basis": "", "resolution_date": "",
-                           "evidence_ids": []}.items():
+                           "evidence_ids": [], "source_doc_id": ""}.items():
             ev.setdefault(key, value)
     trends = payload.get("trends") or {}
     chart_blocks = []
@@ -205,6 +206,11 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     # 证据索引
     evidence_map = payload.get("evidence") or {}
     documents = payload.get("documents") or []
+    documents_by_id = {
+        str(doc.get("doc_id") or ""): doc
+        for doc in documents
+        if isinstance(doc, dict) and doc.get("doc_id")
+    }
 
     # V1.2：证据复核率（独立于覆盖率的可信度指标）。
     data_scope = payload.get("data_scope") or {}
@@ -252,6 +258,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
         "capability_summary": capability_summary,
         "evidence_map": evidence_map,
         "documents": documents,
+        "documents_by_id": documents_by_id,
         "ai": payload.get("ai") or {},
         "method": payload.get("method") or {},
         "plan": payload.get("plan") or {},

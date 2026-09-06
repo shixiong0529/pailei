@@ -86,6 +86,31 @@ TOPIC_KEYWORDS = {
     "减值": ["减值", "減值", "商誉", "商譽"],
 }
 
+# 会计师事务所标题在数据源中被统一归为“审计机构”，其中大量是例行续聘、履职评估和
+# 监督职责报告。只有明确包含变更、退出或审计重大风险信号的文件才进入风险事件时间线；
+# 例行聘任文件仍保留在 docs 中，可作为真正审计机构变更事件的后续状态依据。
+AUDITOR_RISK_HINTS = (
+    "变更", "改聘", "更换", "辞任", "辞聘", "解聘", "不再续聘", "终止聘任",
+    "變更", "更換", "辭任", "辭聘", "不再續聘", "終止聘任",
+    "保留意见", "否定意见", "无法表示意见", "無法表示意見",
+    "保留意見", "否定意見",
+    "持续经营重大不确定性", "持續經營重大不確定性",
+)
+
+
+def is_deterministic_risk_doc(doc: DisclosureDoc) -> bool:
+    """公告是否可由程序直接升级为正式风险事件。"""
+    risk_types = {
+        "监管处罚", "监管调查", "诉讼", "资产冻结", "监管问询",
+        "上市地位", "财务更正", "盈利警告", "审计机构", "股权质押",
+    }
+    if doc.doc_type not in risk_types:
+        return False
+    if doc.doc_type != "审计机构":
+        return True
+    title = doc.title or ""
+    return any(hint in title for hint in AUDITOR_RISK_HINTS)
+
 
 @dataclass
 class ScanResult:
@@ -402,7 +427,7 @@ class ScanPipeline:
                 out = hk.announcements(security.code, stock_id, start, end)
                 docs, meta["gaps"] = out["docs"], out["gaps"]
                 meta.update({"source": "hkexnews", "stock_id": stock_id,
-                             "total": out["total"], "range": out["range"]})
+                             "total": out["total"], "fetched": len(docs), "range": out["range"]})
                 ordered, reasons = select_documents(docs, max_total=settings.max_pdf_downloads)
                 meta["selection"] = reasons
                 for doc in ordered:
@@ -420,7 +445,7 @@ class ScanPipeline:
                 out = cn.announcements(security.code, org[0], start, end, column=org[1])
                 docs, meta["gaps"] = out["docs"], out["gaps"]
                 meta.update({"source": "cninfo", "org_id": org[0],
-                             "total": out["total"], "range": out["range"]})
+                             "total": out["total"], "fetched": len(docs), "range": out["range"]})
                 ordered, reasons = select_documents(docs, max_total=settings.max_pdf_downloads)
                 meta["selection"] = reasons
                 for doc in ordered:
@@ -429,7 +454,10 @@ class ScanPipeline:
                         break
                     cn.download(doc)
         if len(docs) > settings.max_pdf_downloads:
-            meta["gaps"].append(f"{len(docs)} 份公告中仅下载最多 {settings.max_pdf_downloads} 份原文，其余仅检查标题")
+            meta["gaps"].append(
+                f"基础扫描 {len(docs)} 份公告中仅下载最多 {settings.max_pdf_downloads} 份原文，"
+                "其余仅检查标题；按需历史追溯有独立下载上限"
+            )
         for doc in docs:
             if doc.parse_error:
                 meta["gaps"].append(f"《{doc.title}》原文获取失败：{doc.parse_error}")
@@ -532,14 +560,10 @@ class ScanPipeline:
         """
         formal: list[RiskEvent] = []
         clues: list[dict[str, Any]] = []
-        risk_types = {
-            "监管处罚", "监管调查", "诉讼", "资产冻结", "监管问询",
-            "上市地位", "财务更正", "盈利警告", "审计机构", "股权质押",
-        }
         existing: set[str] = set()
         # 1. 确定性事件：由程序按公告类型提取，直接作为正式事件。
         for doc in docs:
-            if doc.doc_type not in risk_types:
+            if not is_deterministic_risk_doc(doc):
                 continue
             existing.add(doc.doc_id)
             quote = ""
@@ -902,6 +926,10 @@ class ScanPipeline:
                 "announcement_range": kw["announcement_meta"].get("range", ""),
                 "announcement_total": kw["announcement_meta"].get("total", 0),
                 "announcement_fetched": len(docs),
+                "announcement_base_fetched": kw["announcement_meta"].get("fetched", len(docs)),
+                "announcement_traced": max(
+                    0, len(docs) - int(kw["announcement_meta"].get("fetched", len(docs)) or 0)
+                ),
                 "documents_downloaded": len([d for d in docs if d.local_path]),
                 "documents_parsed": len([d for d in docs if d.parsed]),
                 "evidence_count": len(evidence_store.items),

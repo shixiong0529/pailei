@@ -115,6 +115,19 @@ class ParseCacheTests(unittest.TestCase):
         finally:
             tmp.cleanup()
 
+    def test_successful_truncated_range_is_cached(self):
+        tmp = tempfile.TemporaryDirectory(prefix="pailei-pcache-partial-")
+        try:
+            with patch.object(settings, "cache_dir", Path(tmp.name)):
+                parsed = ParsedDoc("doc", 300, [(i, f"第{i}页") for i in range(1, 121)], True)
+                _store_cache("sha-partial", 120, 0, parsed)
+                cached = _load_cache("sha-partial", 120, 0)
+                self.assertIsNotNone(cached, "明确页段的成功解析即使截断也应复用")
+                self.assertTrue(cached.truncated)
+                self.assertEqual(len(cached.pages), 120)
+        finally:
+            tmp.cleanup()
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

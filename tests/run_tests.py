@@ -475,9 +475,9 @@ class TestReportRendering(unittest.TestCase):
             ]},
         ]
         html = render_inline(payload)
-        self.assertIn("风险信号密度", html)      # 0-100 仅作次要指标，不再有 A—E 等级
+        self.assertIn("风险信号密度", html)
         self.assertIn("最高已确认风险", html)     # 首页改为展示关键指标
-        self.assertNotIn("score-grade", html)     # 已移除 A—E 公司等级徽标
+        self.assertIn('class="badge grade grade-', html)  # 用户选择保留醒目的 A—E 风险等级
         self.assertNotIn("风险等级分布", html)
         self.assertIn('class="responsive-table"', html)
         self.assertIn('data-label="说明"', html)

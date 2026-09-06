@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -67,8 +69,9 @@ def _load_cache(sha256: str, max_pages: int, start_page: int) -> ParsedDoc | Non
 
 
 def _store_cache(sha256: str, max_pages: int, start_page: int, parsed: ParsedDoc) -> None:
-    if not sha256 or parsed.error or parsed.truncated:
-        return  # 失败或截断结果不缓存，避免复用不完整解析
+    if not sha256 or parsed.error:
+        return  # 失败结果不缓存；按明确页段成功得到的截断结果是可复现的有效缓存
+    tmp_name = ""
     try:
         target = _cache_path(sha256, max_pages, start_page)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -79,9 +82,22 @@ def _store_cache(sha256: str, max_pages: int, start_page: int, parsed: ParsedDoc
             "truncated": parsed.truncated,
             "error": parsed.error,
         }
-        target.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        # 多个扫描可能同时解析同一 PDF；先写同目录临时文件再原子替换，避免半写缓存。
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=target.parent,
+            prefix=target.name + ".", suffix=".tmp", delete=False,
+        ) as fh:
+            tmp_name = fh.name
+            json.dump(payload, fh, ensure_ascii=False)
+        os.replace(tmp_name, target)
     except OSError:
         pass
+    finally:
+        if tmp_name:
+            try:
+                Path(tmp_name).unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def _parse_pdf(path: str | Path, max_pages: int | None = None, start_page: int = 0) -> ParsedDoc:

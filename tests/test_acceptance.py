@@ -115,6 +115,30 @@ class AuditChecks(unittest.TestCase):
         o=rule("OP02").evaluate(context(docs=[d],parsed={d.doc_id:p}))
         self.assertEqual(o.status,RuleStatus.RISK,o.finding)
 
+    def test_06b_going_concern_signal_prevents_op05_normal_conclusion(self):
+        ordinary=doc("普通专项审计报告",kind="审计",did="audit")
+        d=doc(kind="年报",did="annual")
+        p=ParsedDoc(d.doc_id,1,[(1,"审计报告存在与持续经营相关的重大不确定性。")],False)
+        o=rule("OP05").evaluate(context(
+            [fact("net_profit","2026-06-30",-100.),fact("ocf","2026-06-30",50.)],
+            docs=[ordinary,d],parsed={
+                ordinary.doc_id: ParsedDoc(ordinary.doc_id,1,[(1,"标准无保留意见。")],False),
+                d.doc_id:p,
+            },
+        ))
+        self.assertNotEqual(o.status,RuleStatus.NORMAL,o.finding)
+        self.assertIn("持续经营重大不确定性",o.finding)
+
+    def test_06c_gv01_does_not_call_going_concern_document_routine(self):
+        d=doc(
+            "会计师事务所关于审计报告带有持续经营重大不确定性段落的专项说明",
+            "审计机构",
+        )
+        o=rule("GV01").evaluate(context(docs=[d]))
+        self.assertEqual(o.status,RuleStatus.NORMAL)
+        self.assertIn("其他审计相关文件 1 份",o.finding)
+        self.assertNotIn("均为续聘或履职评估类",o.finding)
+
     def test_07_traditional_audit_signal(self):
         p=ParsedDoc("hk",1,[(1,"由於上述事項的重要性，我們無法表示意見。")],False)
         self.assertTrue(scan_audit_opinions(p),"港股繁体无法表示意见未识别")

@@ -174,9 +174,10 @@ class HardeningTests(unittest.TestCase):
 
     def test_llm_empty_events_is_valid_success(self):
         llm=LLMAdapter(LLMConfig(api_key='fixture'))
-        with patch.object(llm,'chat_json',return_value=LLMResult(True,data=[])):
+        with patch.object(llm,'chat_json',return_value=LLMResult(True,data=[])) as chat:
             r=llm.extract_events([{'doc_id':'d','title':'例行公告'}])
         self.assertTrue(r.ok);self.assertEqual(r.data,[]);self.assertFalse(llm.failures)
+        self.assertEqual(chat.call_args.kwargs['max_tokens'],8000)
 
     def test_llm_network_switch_disables_all_steps(self):
         with patch.object(settings,'enable_network',False),patch('app.llm.adapter.HttpClient') as client:

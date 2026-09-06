@@ -84,7 +84,7 @@ class GapClassificationTests(unittest.TestCase):
 
 
 class ReportStatusExpressionTests(unittest.TestCase):
-    def test_report_removes_grade_and_shows_metrics(self):
+    def test_report_keeps_user_selected_grade_and_shows_metrics(self):
         from app.report.render import render_inline
         from tests.test_validation import _base_payload
 
@@ -95,8 +95,7 @@ class ReportStatusExpressionTests(unittest.TestCase):
         p["data_scope"]["evidence_verified"] = 45
         html = render_inline(p)
 
-        self.assertNotIn("score-grade", html)         # 移除 A—E 等级徽标
-        self.assertNotIn("g-b", html)
+        self.assertIn('class="badge grade grade-', html)  # 用户选择保留醒目的 A—E 风险等级
         self.assertIn("风险信号密度", html)            # 0-100 降为次要指标
         self.assertIn("最高已确认风险", html)
         self.assertIn("风险 / 关注", html)
@@ -105,13 +104,14 @@ class ReportStatusExpressionTests(unittest.TestCase):
         self.assertIn("90.0%", html)                  # 45/50 = 90%
         self.assertIn("一般缺口", html)
 
-    def test_report_no_coverage_level_renders_dash(self):
+    def test_report_without_coverage_level_still_renders(self):
         from app.report.render import render_inline
         from tests.test_validation import _base_payload
 
         p = _base_payload()
         html = render_inline(p)
-        self.assertNotIn("score-grade", html)
+        self.assertIn('class="badge grade grade-', html)
+        self.assertIn("覆盖等级", html)
 
 
 if __name__ == "__main__":

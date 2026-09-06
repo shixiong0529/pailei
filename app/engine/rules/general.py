@@ -441,19 +441,26 @@ def _r_gv01(ctx: RuleContext):
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
                 "未获取到公告清单，无法判断审计机构是否变更", "")
 
-    change_words = ("变更会计师事务所", "改聘", "更换会计师事务所", "变更审计机构")
-    routine_words = ("续聘", "履职", "监督职责", "审计委员会", "选聘", "招标")
-    changes, routines = [], []
+    change_words = (
+        "变更会计师事务所", "改聘", "更换会计师事务所", "变更审计机构", "辞任", "辞聘",
+        "變更會計師事務所", "更換會計師事務所", "變更審計機構", "辭任", "辭聘",
+        "核数师辞任", "核數師辭任",
+    )
+    routine_words = (
+        "续聘", "履职", "监督职责", "审计委员会", "选聘", "招标",
+        "續聘", "履職", "監督職責", "審計委員會", "選聘", "招標",
+    )
+    changes, routines, other = [], [], []
     for d in docs:
         title = d.title or ""
         if any(w in title for w in routine_words) and not any(
             w in title for w in change_words
         ):
             routines.append(d)
-        elif "聘任会计师事务所" in title or any(w in title for w in change_words):
+        elif "聘任会计师事务所" in title or "委任核數師" in title or any(w in title for w in change_words):
             changes.append(d)
         else:
-            routines.append(d)
+            other.append(d)
 
     auditor_note = f"；当前审计机构为 {ctx.security.auditor}" if ctx.security.auditor else ""
 
@@ -466,10 +473,12 @@ def _r_gv01(ctx: RuleContext):
         )
     return (
         RuleStatus.NORMAL, Severity.LOW,
-        f"检索到 {len(routines)} 份会计师事务所相关公告，均为续聘或履职评估类"
-        + ("：" + "、".join(d.title for d in routines[:3]) if routines else "")
+        f"检索到 {len(docs)} 份会计师事务所相关公告，未发现审计机构变更或辞任信号"
+        + ("；其中续聘或履职评估类 " + str(len(routines)) + " 份" if routines else "")
+        + ("；其他审计相关文件 " + str(len(other)) + " 份" if other else "")
+        + ("：" + "、".join(d.title for d in docs[:3]) if docs else "")
         + auditor_note,
-        "续聘与履职评估类公告表明审计机构未发生变更，不构成治理风险信号",
+        "本项只判断审计机构变更；审计意见或持续经营信号由审计意见检查项 OP02 单独判断",
     )
 
 
@@ -662,7 +671,9 @@ def _r_op02(ctx: RuleContext):
     """
     from app.data.pdftext import scan_audit_opinions
 
-    audit_docs = ctx.docs_of_type("审计") or ctx.docs_of_type("年报", "半年报")
+    # 专项审计文件与财报正文都可能承载该段落；两类资料都检查，不能因存在一份普通
+    # 审计文件就跳过年报/半年报。
+    audit_docs = ctx.docs_of_type("审计") + ctx.docs_of_type("年报", "半年报")
     if not audit_docs:
         if ctx.docs:
             return (
@@ -747,7 +758,31 @@ def _r_op04(ctx: RuleContext):
 
 
 def _r_op05(ctx: RuleContext):
-    """持续经营：以现金流与盈利双重信号判断。"""
+    """持续经营：综合审计原文与现金流、盈利双重信号判断。"""
+    # 审计报告中的持续经营重大不确定性是比单期现金流更直接的正式信号。
+    # OP02 已将其作为高风险审计意见展示；这里至少标为关注，避免同一报告一边确认
+    # 重大不确定性、一边声称持续经营“未发现明显异常”。
+    from app.data.pdftext import scan_audit_opinions
+
+    audit_docs = ctx.docs_of_type("审计") + ctx.docs_of_type("年报", "半年报")
+    for doc in audit_docs:
+        parsed = ctx.parsed.get(doc.doc_id)
+        if not parsed or parsed.error or not parsed.full_text.strip():
+            continue
+        for hit in scan_audit_opinions(parsed):
+            signal = f"{hit.get('label', '')} {hit.get('matched', '')}"
+            if "持续经营" not in signal and "持續經營" not in signal:
+                continue
+            ctx.pending_evidence.append(
+                (doc, str(hit["quote"]), f"第 {hit['page']} 页", ["审计意见"])
+            )
+            return (
+                RuleStatus.WATCH,
+                Severity.MEDIUM,
+                f"审计报告披露持续经营重大不确定性；财务指标判断见本项明细，审计意见详见 OP02",
+                "正式审计披露已提示持续经营重大不确定性，即使单期经营现金流为正，也不能表述为未发现持续经营异常",
+            )
+
     ocf = ctx.metrics.get("ocf")
     np_ = ctx.metrics.get("net_profit")
     equity = ctx.metrics.get("total_equity")
