@@ -39,11 +39,18 @@ from app.data.cninfo import CninfoClient
 from app.data.eastmoney import EastmoneyClient
 from app.data.hkexnews import HkexnewsClient
 from app.data.identity import IdentityResolver
-from app.data.pdftext import build_evidence, parse_pdf
+from app.data.pdftext import (
+    TARGET_CHAPTER_KEYWORDS,
+    build_evidence,
+    parse_pdf,
+    plan_target_parse,
+    target_chapters_found,
+)
 from app.engine.metrics import compute_metrics
 from app.engine.normalize import FactSet
 from app.engine import gaps
 from app.engine import lifecycle
+from app.engine.selection import select_documents
 from app.engine.runner import (
     EngineOutput,
     RuleContext,
@@ -340,8 +347,9 @@ class ScanPipeline:
                 docs, meta["gaps"] = out["docs"], out["gaps"]
                 meta.update({"source": "hkexnews", "stock_id": stock_id,
                              "total": out["total"], "range": out["range"]})
-                ordered = self._order_docs(docs)
-                for doc in ordered[: settings.max_pdf_downloads]:
+                ordered, reasons = select_documents(docs, max_total=settings.max_pdf_downloads)
+                meta["selection"] = reasons
+                for doc in ordered:
                     if self._time_left() < 60:
                         meta["gaps"].append("接近任务时限，停止下载剩余原文")
                         break
@@ -357,8 +365,9 @@ class ScanPipeline:
                 docs, meta["gaps"] = out["docs"], out["gaps"]
                 meta.update({"source": "cninfo", "org_id": org[0],
                              "total": out["total"], "range": out["range"]})
-                ordered = self._order_docs(docs)
-                for doc in ordered[: settings.max_pdf_downloads]:
+                ordered, reasons = select_documents(docs, max_total=settings.max_pdf_downloads)
+                meta["selection"] = reasons
+                for doc in ordered:
                     if self._time_left() < 60:
                         meta["gaps"].append("接近任务时限，停止下载剩余原文")
                         break
@@ -368,6 +377,7 @@ class ScanPipeline:
         for doc in docs:
             if doc.parse_error:
                 meta["gaps"].append(f"《{doc.title}》原文获取失败：{doc.parse_error}")
+        self.notes.extend(meta.get("selection") or [])
         self.gaps.extend(meta["gaps"])
         return docs, meta
 
@@ -412,9 +422,32 @@ class ScanPipeline:
         if self._time_left() <= 0:
             self.gaps.append("任务期限已到，停止剩余 PDF 解析")
             return
-        parsed = parse_pdf(doc.local_path, timeout=min(60, self._time_left()))
+        parsed = parse_pdf(doc.local_path, timeout=min(60, self._time_left()), sha256=doc.sha256)
         if parsed.truncated:
-            self.gaps.append(f"《{doc.title}》仅解析 {len(parsed.pages)}/{parsed.page_count} 页，剩余正文未覆盖")
+            # 长文档：按上限截断时，区分「重点章节已覆盖」与「关键章节未定位」。
+            missing = set(TARGET_CHAPTER_KEYWORDS) - target_chapters_found(parsed)
+            extra_range = plan_target_parse(parsed)
+            if extra_range is not None and self._time_left() > 0:
+                start_page, extra_pages = extra_range
+                extra = parse_pdf(
+                    doc.local_path,
+                    max_pages=extra_pages,
+                    start_page=start_page,
+                    timeout=min(60, self._time_left()),
+                    sha256=doc.sha256,
+                )
+                if not extra.error:
+                    parsed.pages.extend(extra.pages)
+                    parsed.truncated = extra.truncated
+                    missing = set(TARGET_CHAPTER_KEYWORDS) - target_chapters_found(parsed)
+            if missing:
+                self.gaps.append(
+                    f"《{doc.title}》按上限截断，且关键章节未定位：{'、'.join(sorted(missing))}"
+                )
+            else:
+                self.gaps.append(
+                    f"《{doc.title}》仅解析 {len(parsed.pages)}/{parsed.page_count} 页，重点章节已覆盖"
+                )
         parsed.doc_id = doc.doc_id
         parsed_docs[doc.doc_id] = parsed
         doc.parsed = not parsed.error

@@ -110,6 +110,8 @@ class Settings:
     max_pdf_pages: int = 120
     max_pdf_downloads: int = 25
     scan_timeout_seconds: int = 900
+    # 长文档定向补充解析：目标章节位于前 max_pdf_pages 页之后时，额外解析的页数上限
+    pdf_target_extra_pages: int = 60
 
     # 事件历史追溯（V1.2）：仅未解除重要事件触发，受资源上限约束
     trace_back_max_years: int = 3
@@ -175,6 +177,7 @@ def load_settings() -> Settings:
         max_pdf_pages=_i("MAX_PDF_PAGES", 120),
         max_pdf_downloads=_i("MAX_PDF_DOWNLOADS", 25),
         scan_timeout_seconds=_i("SCAN_TIMEOUT_SECONDS", 900),
+        pdf_target_extra_pages=_i("PDF_TARGET_EXTRA_PAGES", 60),
         trace_back_max_years=_i("TRACE_BACK_MAX_YEARS", 3),
         trace_back_max_queries=_i("TRACE_BACK_MAX_QUERIES", 3),
         trace_back_max_announcements=_i("TRACE_BACK_MAX_ANNOUNCEMENTS", 30),

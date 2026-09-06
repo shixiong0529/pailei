@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +19,137 @@ from app.config import settings
 from app.core.models import DisclosureDoc, Evidence, now_iso
 
 MAX_QUOTE = 900
+
+# 解析器版本：解析逻辑变化时必须递增，使旧缓存失效，避免按文件名误复用。
+PDF_PARSER_VERSION = "1"
+
+# 需要定向定位的关键章节（长文档中可能位于前 120 页之后）。
+TARGET_CHAPTER_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "审计意见": ("审计报告", "审计意见", "独立审计", "審計報告", "審計意見"),
+    "持续经营": ("持续经营", "持續經營"),
+    "诉讼": ("重大诉讼", "诉讼仲裁", "诉讼", "訴訟", "仲裁"),
+    "担保": ("对外担保", "担保情况", "担保事項", "担保"),
+    "受限资产": ("受限资产", "受限資產", "资产受限", "冻结", "凍結"),
+    "关联交易": ("关联交易", "關聯交易", "關連交易"),
+    "债务": ("短期借款", "长期借款", "有息负债", "债务结构", "借款"),
+}
+
+
+def _file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    try:
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(65536), b""):
+                h.update(chunk)
+    except OSError:
+        return ""
+    return h.hexdigest()
+
+
+def _cache_path(sha256: str, max_pages: int, start_page: int) -> Path:
+    return settings.cache_dir / "pdf_parse" / (
+        f"{sha256}.{PDF_PARSER_VERSION}.{max_pages}.{start_page}.json"
+    )
+
+
+def _load_cache(sha256: str, max_pages: int, start_page: int) -> ParsedDoc | None:
+    if not sha256:
+        return None
+    path = _cache_path(sha256, max_pages, start_page)
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["pages"] = [tuple(p) for p in data["pages"]]
+        return ParsedDoc(**data)
+    except (OSError, ValueError, TypeError, KeyError):
+        return None
+
+
+def _store_cache(sha256: str, max_pages: int, start_page: int, parsed: ParsedDoc) -> None:
+    if not sha256 or parsed.error or parsed.truncated:
+        return  # 失败或截断结果不缓存，避免复用不完整解析
+    try:
+        target = _cache_path(sha256, max_pages, start_page)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "doc_id": parsed.doc_id,
+            "page_count": parsed.page_count,
+            "pages": parsed.pages,
+            "truncated": parsed.truncated,
+            "error": parsed.error,
+        }
+        target.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _parse_pdf(path: str | Path, max_pages: int | None = None, start_page: int = 0) -> ParsedDoc:
+    """提取 PDF 文本。失败时返回带 error 的空结果，不抛异常。
+
+    start_page 为 0 基起始页，用于长文档的定向补充解析（仅解析指定页段）。
+    """
+    max_pages = max_pages or settings.max_pdf_pages
+    path = Path(path)
+    doc_id = path.stem
+    if not path.exists():
+        return ParsedDoc(doc_id, 0, [], False, error="文件不存在")
+    try:
+        import pdfplumber
+
+        pages: list[tuple[int, str]] = []
+        total = 0
+        with pdfplumber.open(str(path)) as pdf:
+            total = len(pdf.pages)
+            for idx, page in enumerate(pdf.pages[start_page : start_page + max_pages], start=start_page + 1):
+                try:
+                    text = page.extract_text() or ""
+                except Exception:
+                    text = ""
+                pages.append((idx, _clean(text)))
+        return ParsedDoc(doc_id, total, pages, truncated=total > start_page + max_pages)
+    except Exception as exc:  # 解析失败必须被记录，而不是中断扫描
+        return ParsedDoc(doc_id, 0, [], False, error=f"{type(exc).__name__}: {exc}"[:300])
+
+
+def parse_pdf(
+    path: str | Path,
+    max_pages: int | None = None,
+    *,
+    timeout: float = 60,
+    sha256: str = "",
+    start_page: int = 0,
+) -> ParsedDoc:
+    """单文件解析在可终止子进程中执行，慢页不能占满任务线程。
+
+    结果按（SHA256 + 解析器版本 + 页数 + 起始页）缓存；缓存命中跳过子进程解析。
+    """
+    import subprocess
+    import sys
+    if timeout <= 0:
+        return ParsedDoc(Path(path).stem, 0, [], True, "解析超时：任务期限已到")
+    path = Path(path)
+    max_pages = max_pages or settings.max_pdf_pages
+    sha = sha256 or _file_sha256(path)
+    cached = _load_cache(sha, max_pages, start_page)
+    if cached is not None:
+        return cached
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "app.data.pdftext", str(path.resolve()),
+             str(max_pages), str(start_page)],
+            cwd=str(Path(__file__).resolve().parents[2]), capture_output=True,
+            text=True, timeout=timeout, check=True,
+        )
+        data = json.loads(result.stdout)
+        data["pages"] = [tuple(page) for page in data["pages"]]
+        parsed = ParsedDoc(**data)
+        _store_cache(sha, max_pages, start_page, parsed)
+        return parsed
+    except subprocess.TimeoutExpired:
+        return ParsedDoc(Path(path).stem, 0, [], True, "PDF 解析超时，已终止解析进程")
+    except Exception as exc:
+        return ParsedDoc(Path(path).stem, 0, [], False, f"PDF 解析失败：{type(exc).__name__}")
 
 
 @dataclass
@@ -36,54 +169,6 @@ class ParsedDoc:
     @property
     def full_text(self) -> str:
         return "\n".join(t for _, t in self.pages)
-
-
-def _parse_pdf(path: str | Path, max_pages: int | None = None) -> ParsedDoc:
-    """提取 PDF 文本。失败时返回带 error 的空结果，不抛异常。"""
-    max_pages = max_pages or settings.max_pdf_pages
-    path = Path(path)
-    doc_id = path.stem
-    if not path.exists():
-        return ParsedDoc(doc_id, 0, [], False, error="文件不存在")
-    try:
-        import pdfplumber
-
-        pages: list[tuple[int, str]] = []
-        total = 0
-        with pdfplumber.open(str(path)) as pdf:
-            total = len(pdf.pages)
-            for idx, page in enumerate(pdf.pages[:max_pages], start=1):
-                try:
-                    text = page.extract_text() or ""
-                except Exception:
-                    text = ""
-                pages.append((idx, _clean(text)))
-        return ParsedDoc(doc_id, total, pages, truncated=total > max_pages)
-    except Exception as exc:  # 解析失败必须被记录，而不是中断扫描
-        return ParsedDoc(doc_id, 0, [], False, error=f"{type(exc).__name__}: {exc}"[:300])
-
-
-def parse_pdf(path: str | Path, max_pages: int | None = None, *, timeout: float = 60) -> ParsedDoc:
-    """单文件解析在可终止子进程中执行，慢页不能占满任务线程。"""
-    import json
-    import subprocess
-    import sys
-    if timeout <= 0:
-        return ParsedDoc(Path(path).stem, 0, [], True, "解析超时：任务期限已到")
-    try:
-        result = subprocess.run(
-            [sys.executable, "-m", "app.data.pdftext", str(Path(path).resolve()),
-             str(max_pages or settings.max_pdf_pages)],
-            cwd=str(Path(__file__).resolve().parents[2]), capture_output=True,
-            text=True, timeout=timeout, check=True,
-        )
-        data = json.loads(result.stdout)
-        data["pages"] = [tuple(page) for page in data["pages"]]
-        return ParsedDoc(**data)
-    except subprocess.TimeoutExpired:
-        return ParsedDoc(Path(path).stem, 0, [], True, "PDF 解析超时，已终止解析进程")
-    except Exception as exc:
-        return ParsedDoc(Path(path).stem, 0, [], False, f"PDF 解析失败：{type(exc).__name__}")
 
 
 def _clean(text: str) -> str:
@@ -352,8 +437,40 @@ def has_audit_opinion_section(parsed: ParsedDoc) -> bool:
     return bool(re.search(r"(?:标准无保留意见|无保留意见|我们认为[\s\S]{0,120}公允反映)", text))
 
 
+def target_chapters_found(parsed: ParsedDoc) -> set[str]:
+    """返回在已解析页中定位到的关键章节名（关键词命中即视为已定位）。"""
+    found: set[str] = set()
+    full = parsed.full_text
+    for name, keywords in TARGET_CHAPTER_KEYWORDS.items():
+        if any(k in full for k in keywords):
+            found.add(name)
+    return found
+
+
+def plan_target_parse(
+    parsed: ParsedDoc,
+    *,
+    max_pages: int | None = None,
+    extra_pages: int | None = None,
+) -> tuple[int, int] | None:
+    """为长文档规划定向补充解析范围，返回 (start_page, pages) 或 None。
+
+    仅当文档被截断（总页数超过默认解析窗口）且存在未定位的关键章节时，
+    才返回从默认窗口之后开始的补充解析范围；受额外页数上限约束，不全文解析。
+    """
+    max_pages = max_pages or settings.max_pdf_pages
+    extra_pages = extra_pages or settings.pdf_target_extra_pages
+    if not parsed.truncated or parsed.page_count <= max_pages:
+        return None
+    missing = set(TARGET_CHAPTER_KEYWORDS) - target_chapters_found(parsed)
+    if not missing:
+        return None
+    return (max_pages, min(extra_pages, parsed.page_count - max_pages))
+
+
 if __name__ == "__main__":
     import json
     import sys
     from dataclasses import asdict
-    print(json.dumps(asdict(_parse_pdf(sys.argv[1], int(sys.argv[2]))), ensure_ascii=False))
+    start = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+    print(json.dumps(asdict(_parse_pdf(sys.argv[1], int(sys.argv[2]), start)), ensure_ascii=False))
