@@ -242,7 +242,9 @@ section{scroll-margin-top:16px}
   <p class="score-note">风险信号密度为检查项扣分加权汇总，仅反映已覆盖资料的信号密集程度，不代表公司评级、投资价值或违约概率。</p>
 
   <p class="hint">适用检查 {{ coverage.applicable }} 项，已形成判断 {{ coverage.evaluated }} 项，
-    <b>{{ summary.insufficient_count }}</b> 项数据不足。扫描状态：{{ scan.status or '未记录' }}。
+    <b>{{ summary.insufficient_count }}</b> 项数据不足{% if capability_summary.unsupported_source %}，
+    另有 <b>{{ capability_summary.unsupported_source }}</b> 项因数据源暂不支持、未计入有效检查{% endif %}。
+    扫描状态：{{ scan.status or '未记录' }}。
     原文存在性复核通过不等于已确认整条结论。</p>
   {% if summary.risk_count or summary.watch_count %}
   <div class="warn">
@@ -431,6 +433,8 @@ section{scroll-margin-top:16px}
   {% if gaps %}<div class="warn"><b>本次资料与执行缺口</b><ul>{% for gap in gaps %}<li>{{ gap }}</li>{% endfor %}</ul></div>{% endif %}
   {% if missing_data %}<details><summary>数据不足的检查（{{ missing_data|length }} 项）</summary>
     <ul>{% for item in missing_data %}<li>{{ item.rule_id }} {{ item.name }}：{{ item.reason }}</li>{% endfor %}</ul></details>{% endif %}
+  {% if unsupported_data %}<details><summary>数据源暂不支持的检查（{{ unsupported_data|length }} 项，未计入有效检查）</summary>
+    <ul>{% for item in unsupported_data %}<li>{{ item.rule_id }} {{ item.name }}：{{ item.reason }}</li>{% endfor %}</ul></details>{% endif %}
   {% if notes %}<details><summary>计算口径说明</summary><ul>{% for note in notes %}<li>{{ note }}</li>{% endfor %}</ul></details>{% endif %}
   {% if ai.notes or ai.usage.failures or ai.verification %}<details><summary>AI 执行与核验详情</summary>
     <ul>{% for note in ai.notes %}<li>{{ note }}</li>{% endfor %}

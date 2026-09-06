@@ -20,6 +20,7 @@ from app.config import settings
 from app.core import db
 from app.core.http_client import FetchError, HttpClient, summarize_records
 from app.core.models import (
+    Capability,
     Dimension,
     DisclosureDoc,
     Evidence,
@@ -276,8 +277,22 @@ class ScanPipeline:
         refresh_coverage(output)
         if self.llm.failures:
             self.gaps.extend(f"模型步骤未完整执行：{reason}" for reason in self.llm.failures)
-        if output.insufficient():
-            self.gaps.append(f"{len(output.insufficient())} 项检查缺少判断依据，详情见数据不足汇总")
+        insufficient_enabled = [
+            o for o in output.outcomes
+            if o.status is RuleStatus.INSUFFICIENT and o.capability == Capability.ENABLED.value
+        ]
+        unsupported = [
+            o for o in output.outcomes
+            if o.capability == Capability.UNSUPPORTED_SOURCE.value
+            and o.status is not RuleStatus.NOT_APPLICABLE
+        ]
+        if insufficient_enabled:
+            self.gaps.append(f"{len(insufficient_enabled)} 项检查缺少判断依据，详情见数据不足汇总")
+        if unsupported:
+            self.notes.append(
+                f"{len(unsupported)} 项行业检查因数据源暂不支持，未计入有效检查数量（"
+                f"{'、'.join(o.rule.rule_id for o in unsupported)}）"
+            )
 
         # ---------- 8. 报告生成 ----------
         self._checkpoint(Stage.REPORT)
@@ -813,6 +828,7 @@ class ScanPipeline:
                     "still_effective": o.still_effective,
                     "ai_interpreted": o.ai_interpreted,
                     "industry_pack": o.industry_pack,
+                    "capability": o.capability,
                 }
             )
 
@@ -857,7 +873,15 @@ class ScanPipeline:
                 "highest_severity": highest.value,
                 "risk_count": len(output.risks()),
                 "watch_count": len(output.watches()),
-                "insufficient_count": len(output.insufficient()),
+                "insufficient_count": len([
+                    o for o in output.outcomes
+                    if o.status is RuleStatus.INSUFFICIENT and o.capability == Capability.ENABLED.value
+                ]),
+                "unsupported_count": len([
+                    o for o in output.outcomes
+                    if o.capability == Capability.UNSUPPORTED_SOURCE.value
+                    and o.status is not RuleStatus.NOT_APPLICABLE
+                ]),
                 "top_findings": [
                     {
                         "rule_id": o.rule.rule_id,
@@ -897,6 +921,8 @@ class ScanPipeline:
             "notes": list(dict.fromkeys(self.notes)),
             "financial_facts": [f.to_dict() for f in facts.facts],
             "missing_data": self._collect_missing(output),
+            "unsupported_data": self._collect_unsupported(output),
+            "capability_summary": self._capability_summary(output),
             "evidence": {k: v.to_dict() for k, v in evidence_store.items.items()},
             "documents": [d.to_dict() for d in docs],
             "ai": {
@@ -965,11 +991,62 @@ class ScanPipeline:
     def _collect_missing(output: EngineOutput) -> list[dict[str, str]]:
         out = []
         for o in output.outcomes:
-            if o.status is RuleStatus.INSUFFICIENT:
+            if o.status is RuleStatus.INSUFFICIENT and o.capability == Capability.ENABLED.value:
                 out.append(
                     {"rule_id": o.rule.rule_id, "name": o.rule.name, "reason": o.finding}
                 )
         return out
+
+    @staticmethod
+    def _collect_unsupported(output: EngineOutput) -> list[dict[str, str]]:
+        """数据源暂不支持的行业检查：可展示「尚缺数据能力」，不冒充已执行。
+
+        仅统计适用但缺少数据能力的检查；对当前主体不适用（NOT_APPLICABLE）的
+        行业规则不列入，避免把「不适用」误报成「数据源缺失」。
+        """
+        out = []
+        for o in output.outcomes:
+            if (o.capability == Capability.UNSUPPORTED_SOURCE.value
+                    and o.status is not RuleStatus.NOT_APPLICABLE):
+                out.append(
+                    {
+                        "rule_id": o.rule.rule_id,
+                        "name": o.rule.name,
+                        "dimension": o.rule.dimension.value,
+                        "reason": o.finding,
+                    }
+                )
+        return out
+
+    @staticmethod
+    def _capability_summary(output: EngineOutput) -> dict[str, Any]:
+        """行业规则能力摘要：仅统计适用于当前主体的检查。
+
+        enabled = 已具备可靠数据字段；unsupported_source = 数据源暂不支持。
+        不适用（NOT_APPLICABLE）的检查既不属 enabled 也不属 unsupported。
+        """
+        enabled = 0
+        unsupported = 0
+        unsupported_rules: list[dict[str, str]] = []
+        for o in output.outcomes:
+            if o.status is RuleStatus.NOT_APPLICABLE:
+                continue
+            if o.capability == Capability.UNSUPPORTED_SOURCE.value:
+                unsupported += 1
+                unsupported_rules.append(
+                    {
+                        "rule_id": o.rule.rule_id,
+                        "name": o.rule.name,
+                        "dimension": o.rule.dimension.value,
+                    }
+                )
+            else:
+                enabled += 1
+        return {
+            "enabled": enabled,
+            "unsupported_source": unsupported,
+            "unsupported_rules": unsupported_rules,
+        }
 
     def _limitations(self) -> list[str]:
         items = [

@@ -212,6 +212,12 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     evidence_verified = int(data_scope.get("evidence_verified") or 0)
     evidence_rate = round(evidence_verified / evidence_count * 100, 1) if evidence_count else None
 
+    # V1.2 阶段 6：行业规则数据能力状态。旧报告无该字段时给兼容默认。
+    capability_summary = payload.get("capability_summary") or {
+        "enabled": 0, "unsupported_source": 0, "unsupported_rules": [],
+    }
+    unsupported_data = payload.get("unsupported_data") or []
+
     return {
         "payload": payload,
         "current_rule_version": RULE_VERSION,
@@ -242,6 +248,8 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
         "gaps": payload.get("gaps") or [],
         "notes": payload.get("notes") or [],
         "missing_data": payload.get("missing_data") or [],
+        "unsupported_data": unsupported_data,
+        "capability_summary": capability_summary,
         "evidence_map": evidence_map,
         "documents": documents,
         "ai": payload.get("ai") or {},

@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from app.core.models import (
+    Capability,
     Dimension,
     DisclosureDoc,
     Evidence,
@@ -135,6 +136,8 @@ class Rule:
     exclude_packs: list[str] = field(default_factory=list)
     check: Callable[[RuleContext], tuple[RuleStatus, Severity, str, str]] = None  # type: ignore
     version: str = RULE_VERSION
+    # 数据能力状态：enabled = 已具备可靠数据字段；unsupported_source = 数据源暂不支持。
+    capability: str = Capability.ENABLED.value
 
     def evaluate(self, ctx: RuleContext) -> "RuleOutcome":
         if ctx.industry_pack in self.exclude_packs:
@@ -148,6 +151,7 @@ class Rule:
                        if ctx.industry_pack == "realestate" else "")
                 ),
                 why="避免对特殊行业套用普通企业的财务结构标准",
+                capability=self.capability,
             )
         if self.packs and ctx.industry_pack not in self.packs and "general" not in self.packs:
             return RuleOutcome(
@@ -156,6 +160,7 @@ class Rule:
                 severity=Severity.UNKNOWN,
                 finding=f"该检查项适用于 {'/'.join(self.packs)} 行业包，当前主体归类为 {ctx.industry_pack}",
                 why="",
+                capability=self.capability,
             )
         missing = self._missing(ctx)
         if missing:
@@ -166,6 +171,7 @@ class Rule:
                 finding="缺少判断所需的数据:" + "、".join(missing),
                 why="在已获取资料范围内无法判断，不输出无风险结论",
                 to_verify=[f"补充 {m} 数据后重新检查" for m in missing],
+                capability=self.capability,
             )
         try:
             status, severity, finding, why = self.check(ctx)
@@ -177,8 +183,10 @@ class Rule:
                 finding=f"规则执行异常：{type(exc).__name__}",
                 why="",
                 to_verify=["检查该指标的数据质量后重试"],
+                capability=self.capability,
             )
-        return RuleOutcome(rule=self, status=status, severity=severity, finding=finding, why=why)
+        return RuleOutcome(rule=self, status=status, severity=severity, finding=finding,
+                           why=why, capability=self.capability)
 
     def _missing(self, ctx: RuleContext) -> list[str]:
         missing = []
@@ -208,6 +216,7 @@ class RuleOutcome:
     ai_interpreted: bool = False
     still_effective: Optional[bool] = None
     industry_pack: str = "general"
+    capability: str = Capability.ENABLED.value
 
     def to_result(self) -> "object":
         from app.core.models import RuleResult
@@ -228,6 +237,7 @@ class RuleOutcome:
             rule_version=self.rule.version,
             ai_interpreted=self.ai_interpreted,
             still_effective=self.still_effective,
+            capability=self.capability,
         )
 
 

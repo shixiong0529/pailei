@@ -83,6 +83,18 @@ class EvidenceStrength(str, Enum):
     WEAK = "线索待核实"
 
 
+class Capability(str, Enum):
+    """规则的数据能力状态：区分「已具备数据能力」与「数据源暂不支持」。
+
+    V1.2 阶段 6：无可靠数据字段的行业检查（银行资本充足率、保险偿付能力、
+    券商净资本等）标记为 unsupported_source，不计入「本次已执行的有效检查数量」，
+    仅在「尚缺数据能力」中展示，不冒充已完成检查。
+    """
+
+    ENABLED = "enabled"
+    UNSUPPORTED_SOURCE = "unsupported_source"
+
+
 @dataclass
 class Security:
     """证券标识。"""
@@ -235,6 +247,7 @@ class RuleResult:
     industry_pack: str = "general"
     rule_version: str = "1.0"
     ai_interpreted: bool = False
+    capability: str = Capability.ENABLED.value
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
