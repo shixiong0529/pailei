@@ -877,7 +877,7 @@ class ScanPipeline:
         trends = self._build_trends(facts)
 
         payload: dict[str, Any] = {
-            "report_version": "1.1",
+            "report_version": "1.2",
             "rule_version": RULE_VERSION,
             "task_id": self.task_id,
             "generated_at": now_iso(),
