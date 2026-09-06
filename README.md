@@ -27,6 +27,7 @@ V1.2 在不增加规则数量、不降低报告质量的前提下，新增：模
 | `V1.2_DEVELOPMENT_HANDOVER.md` | 交给开发模型执行的 V1.2 可信度改造任务、边界与完成标准 |
 | `docs/RULES.md` | 52 项检查规则完整参考：触发条件、阈值、适用行业、能力口径 |
 | `docs/V1.2_IMPLEMENTATION_REPORT.md` | V1.2 可信度改造实施报告：最终行为、迁移、测试、样本与回滚 |
+| `docs/V1.2_ACCEPTANCE_HANDOVER.md` | V1.2 验收交接文档（交给验收方 codex，含可执行验收步骤与完成定义逐项对照） |
 | `docs/PHASE0_DATA_VALIDATION.md` | 阶段 0 数据源验证报告（真实接口实测） |
 | `DEVELOPMENT_STATUS.md` | 开发状态：已完成项、误报修复记录、未实现清单、续接指引 |
 | `docs/ACCEPTANCE_DIAGNOSTIC_REPORT_2026-09-06.md` | 修复前的全面验收与 31 组问题诊断（历史快照） |
