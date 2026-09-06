@@ -80,6 +80,23 @@ python scripts/cleanup.py              # 预览将删除的内容
 python scripts/cleanup.py --execute    # 实际清理 PDF 解析缓存、模型缓存、旧报告版本行
 ```
 
+### 释放本地磁盘空间
+
+公告 PDF、PDF 解析缓存和验收过程的 `runtime/` 目录均为可再生文件。确认当前没有扫描任务后，
+可删除这些内容；下次强制扫描会按需重新下载公告原文：
+
+```bash
+rm -rf data/files data/cache/pdf_parse \
+  docs/acceptance-2026-09-06/runtime docs/fixes-2026-09-06/runtime
+```
+
+`data/reports/` 中的 HTML/JSON 是本地导出副本；Web 报告以 `data/app.db` 中的报告 payload 为事实源，
+不需要离线副本时可以删除旧文件。不要删除 `data/app.db`，除非明确要清空全部任务、报告和模型缓存。
+
+2026-09-06 完成过一次清理：删除上述临时目录、全部可重下 PDF、解析缓存和 62 个旧报告文件，
+保留最终三份 V1.2 报告；项目占用由约 601 MB 降至 43 MB。清理后首次扫描会重新下载 PDF，
+因此首次耗时可能高于已命中本地文件缓存的复测结果。
+
 阶段 0 数据验证（真实接口探测，约 2 分钟）：
 
 ```bash

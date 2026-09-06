@@ -16,3 +16,6 @@ __pycache__/
 
 # WorkBuddy 本地工作记忆（不进仓库）
 .workbuddy/
+
+# 验收与修复过程的可再生运行产物
+/docs/*/runtime/
