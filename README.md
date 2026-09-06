@@ -19,6 +19,7 @@
 |---|---|
 | `README.md`（本文） | 安装、启动、页面与 API、配置、常见问题 |
 | `HANDOVER.md` | 交接报告：架构、设计决策、验收步骤与审核重点（供验收方使用） |
+| `V1.2_DEVELOPMENT_HANDOVER.md` | 交给开发模型执行的 V1.2 可信度改造任务、边界与完成标准 |
 | `docs/RULES.md` | 52 项检查规则完整参考：触发条件、阈值、适用行业 |
 | `docs/PHASE0_DATA_VALIDATION.md` | 阶段 0 数据源验证报告（真实接口实测） |
 | `DEVELOPMENT_STATUS.md` | 开发状态：已完成项、误报修复记录、未实现清单、续接指引 |
