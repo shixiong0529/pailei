@@ -353,6 +353,43 @@ section{scroll-margin-top:16px}
     {% endfor %}
     {% endif %}
   {% endfor %}
+
+  {% if timeline %}
+  <h3>已确认事件时间线</h3>
+  <p class="hint">已确认事件均通过原文复核，绑定至少一条可回溯证据；同一事项的进展在后续版本合并展示。</p>
+  <table class="responsive-table" aria-label="已确认事件时间线">
+    <thead><tr><th style="width:16%">日期</th><th style="width:16%">类型</th><th>事件</th><th style="width:12%">证据</th></tr></thead>
+    <tbody>
+    {% for e in timeline %}
+      <tr>
+        <td data-label="日期" class="mono">{{ e.occurred_date }}</td>
+        <td data-label="类型"><span class="tag">{{ e.category }}</span></td>
+        <td data-label="事件"><b>{{ e.title }}</b>{% if e.summary %}<br><span style="color:#6b7280">{{ e.summary }}</span>{% endif %}
+          {% if e.resolved is sameas true %}<br><span style="color:#16a34a">已解除{% if e.resolution_note %}：{{ e.resolution_note }}{% endif %}</span>{% endif %}</td>
+        <td data-label="证据">{% if e.evidence_ids %}{{ e.evidence_ids|length }} 条{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if pending_clues %}
+  <h3>待核实线索</h3>
+  <p class="hint">以下线索来自模型但未通过原文复核，不参与正式风险计数与已确认时间线，仅供人工核实。</p>
+  <table class="responsive-table" aria-label="待核实线索">
+    <thead><tr><th style="width:16%">日期</th><th style="width:14%">类型</th><th>线索</th><th>未通过原因</th></tr></thead>
+    <tbody>
+    {% for c in pending_clues %}
+      <tr>
+        <td data-label="日期" class="mono">{{ c.occurred_date or '—' }}</td>
+        <td data-label="类型"><span class="tag">{{ c.category or '未定' }}</span></td>
+        <td data-label="线索">{{ c.title or '（无标题）' }}{% if c.summary %}<br><span style="color:#6b7280">{{ c.summary }}</span>{% endif %}</td>
+        <td data-label="未通过原因" style="color:#b45309">{{ c.reason }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
 </section>
 
 {# ---------- 4. 来源与方法（极简） ---------- #}

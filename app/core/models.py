@@ -263,6 +263,14 @@ class RiskEvent:
         return asdict(self)
 
 
+# 事件类型的固定枚举：模型生成的候选事件只能使用这些类型，其他类型一律拒收。
+EVENT_CATEGORIES = [
+    "监管处罚", "监管调查", "诉讼", "资产冻结", "监管问询", "上市地位",
+    "财务更正", "盈利警告", "审计机构", "股权质押", "担保", "关联交易",
+    "高管变动", "股东减持", "质押冻结",
+]
+
+
 class TaskStatus(str, Enum):
     QUEUED = "排队"
     RUNNING = "运行"

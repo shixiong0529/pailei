@@ -214,6 +214,23 @@ def search_pages(parsed: ParsedDoc, pattern: str, limit: int = 5) -> list[tuple[
     return out
 
 
+def find_quote_page(parsed: ParsedDoc, quote: str) -> int | None:
+    """定位完整引文所在的页码（忽略空白差异）。
+
+    要求引文完整出现在同一页内，防止“前缀命中 + 尾部伪造”被接受。
+    找不到或引文为空返回 None。
+    """
+    key = re.sub(r"\s+", "", quote or "")
+    if not key:
+        return None
+    for page_no, text in parsed.pages:
+        if not text:
+            continue
+        if key in re.sub(r"\s+", "", text):
+            return page_no
+    return None
+
+
 def summarize_parsed(parsed: ParsedDoc) -> dict[str, object]:
     return {
         "doc_id": parsed.doc_id,

@@ -221,6 +221,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
         "dimensions": dimensions,
         "dimension_desc": _dimension_desc,
         "timeline": payload.get("timeline") or [],
+        "pending_clues": payload.get("pending_clues") or [],
         "mitigations": payload.get("mitigations") or [],
         "gaps": payload.get("gaps") or [],
         "notes": payload.get("notes") or [],

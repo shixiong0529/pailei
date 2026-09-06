@@ -26,7 +26,7 @@ from app.core.http_client import HttpClient, FetchError
 from app.llm import cache
 
 # 提示词版本：改动任何业务提示词（system/user 文案、字段要求）时递增，使旧缓存失效。
-PROMPT_VERSION = "1"
+PROMPT_VERSION = "2"
 # 校验版本：改动返回结构的校验规则时递增，使旧缓存失效。
 VALIDATION_VERSION = "1"
 
@@ -393,23 +393,30 @@ class LLMAdapter:
         return self._run_batched(batches, build, "interpret")
 
     def extract_events(self, docs_context: list[dict[str, Any]]) -> LLMResult:
-        """从公告标题与片段中提取风险事件及后续进展线索。"""
+        """从公告标题与片段中提取候选风险事件。
+
+        模型只产生候选事件：必须给出 doc_id 与 evidence_quote，日期由程序采用公告日期，
+        不采信模型自由生成的日期；候选事件须经原文复核通过才升级为正式事件。
+        """
         if not self.available:
             return LLMResult(ok=False, skipped_reason=self.unavailable_reason)
 
         def build(batch: list[Any]) -> tuple[str, str]:
             system = (
                 "你是信息披露分析助手。只从给定公告标题与片段中提取事件，"
-                "不得推断片段以外的信息。输出必须是严格的 JSON 数组。"
+                "不得推断片段以外的信息，不得虚构引文。输出必须是严格的 JSON 数组。"
             )
             user = (
                 "以下是该公司近期公告的标题与正文片段：\n"
                 + json.dumps(batch, ensure_ascii=False)[:18000]
                 + "\n\n请提取其中可能构成基本面风险的事件，每项输出：\n"
-                "title(事件标题), occurred_date(YYYY-MM-DD，取自公告日期), "
-                "category(财务/偿债/治理/监管/经营 之一), summary(中文，60-150字), "
-                "doc_id(对应的公告 ID), resolved(true/false/null), "
-                "resolution_note(若已解除则说明依据)。\n"
+                "title(事件标题), category(必须来自固定枚举：监管处罚/监管调查/诉讼/"
+                "资产冻结/监管问询/上市地位/财务更正/盈利警告/审计机构/股权质押/"
+                "担保/关联交易/高管变动/股东减持/质押冻结 之一), "
+                "summary(中文，60-150字), doc_id(对应的公告 ID), "
+                "evidence_quote(从片段中逐字摘录的可引用原文，不超过 80 字，必须能在原文中找到), "
+                "resolved(true/false/null), resolution_note(若已解除则说明依据)。\n"
+                "不要输出 occurred_date 字段，日期由程序确定。\n"
                 "只输出 JSON 数组，不要额外文字。"
             )
             return system, user

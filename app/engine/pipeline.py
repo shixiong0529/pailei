@@ -22,6 +22,8 @@ from app.core.http_client import FetchError, HttpClient, summarize_records
 from app.core.models import (
     Dimension,
     DisclosureDoc,
+    Evidence,
+    EVENT_CATEGORIES,
     Market,
     PeriodType,
     RiskEvent,
@@ -239,7 +241,7 @@ class ScanPipeline:
 
         # ---------- 6. 专项阅读 ----------
         self._checkpoint(Stage.READ)
-        events = self._extract_events(docs, parsed_docs)
+        events, pending_clues = self._extract_events(docs, parsed_docs, evidence_store)
         ai_interpret(output, ctx, self.llm)
 
         # ---------- 7. 核验 ----------
@@ -274,6 +276,7 @@ class ScanPipeline:
             evidence_store=evidence_store,
             output=output,
             events=events,
+            pending_clues=pending_clues,
             plan=plan,
             industry_pack=industry_pack,
             started=started,
@@ -401,24 +404,33 @@ class ScanPipeline:
         return store, parsed_docs
 
     def _extract_events(
-        self, docs: list[DisclosureDoc], parsed: dict[str, Any]
-    ) -> list[RiskEvent]:
-        """事件提取：优先用模型；未启用模型时按公告类型做确定性提取。"""
-        events: list[RiskEvent] = []
+        self, docs: list[DisclosureDoc], parsed: dict[str, Any], store: Any = None
+    ) -> tuple[list[RiskEvent], list[dict[str, Any]]]:
+        """事件提取：确定性事件 + 模型候选事件。
+
+        模型只能产生候选事件，必须携带 doc_id 与 evidence_quote，并在对应 ParsedDoc
+        中定位完整引文、生成带文档/页码/指纹的 Evidence 且通过原文复核后，才能升级为
+        正式事件；未通过者进入待核实线索，不参与正式时间线与风险计数。
+        """
+        formal: list[RiskEvent] = []
+        clues: list[dict[str, Any]] = []
         risk_types = {
             "监管处罚", "监管调查", "诉讼", "资产冻结", "监管问询",
             "上市地位", "财务更正", "盈利警告", "审计机构", "股权质押",
         }
+        existing: set[str] = set()
+        # 1. 确定性事件：由程序按公告类型提取，直接作为正式事件。
         for doc in docs:
             if doc.doc_type not in risk_types:
                 continue
+            existing.add(doc.doc_id)
             quote = ""
             location = ""
             pdoc = parsed.get(doc.doc_id)
             if pdoc and pdoc.pages:
                 location = f"第 {pdoc.pages[0][0]} 页"
                 quote = pdoc.pages[0][1][:300]
-            events.append(
+            formal.append(
                 RiskEvent(
                     event_id=f"evt:{doc.doc_id}",
                     title=doc.title,
@@ -431,45 +443,130 @@ class ScanPipeline:
                     resolved=None,
                 )
             )
-        # 模型补充：只追加模型从片段中提取到的事件，不得修改上述确定性事件
+        # 2. 模型候选事件：须证据复核通过才升级为正式事件。
         if self.llm.available and parsed and self._time_left() > 0:
             context = [
                 {
                     "doc_id": d.doc_id,
                     "title": d.title,
                     "date": d.publish_date,
+                    "doc_type": d.doc_type,
+                    "source": d.source,
+                    "url": d.url,
                     "excerpt": (parsed[d.doc_id].pages[0][1][:600] if d.doc_id in parsed and parsed[d.doc_id].pages else ""),
                 }
                 for d in docs[:20]
             ]
             result = self.llm.extract_events(context)
             if result.ok:
-                existing = {e.source_doc_id for e in events}
                 allowed = {item["doc_id"]: item for item in context}
                 for item in result.data or []:
                     if not isinstance(item, dict):
                         continue
                     doc_id = str(item.get("doc_id") or "")
                     if not doc_id or doc_id not in allowed:
-                        self.gaps.append("模型返回了不在本批输入中的事件来源，已拒收")
+                        clues.append(
+                            self._clue(item, "", "事件引用了不在本批输入中的公告 ID，已拒收")
+                        )
                         continue
                     if doc_id in existing:
                         continue
-                    existing.add(doc_id)
-                    events.append(
-                        RiskEvent(
-                            event_id=f"evt:ai:{doc_id}",
-                            title=str(item.get("title") or "")[:200],
-                            occurred_date=allowed[doc_id]["date"],
-                            category=str(item.get("category") or "经营"),
-                            summary=str(item.get("summary") or "")[:500],
-                            source_doc_id=doc_id,
-                            resolved=item.get("resolved") if isinstance(item.get("resolved"), bool) else None,
-                            resolution_note=str(item.get("resolution_note") or "")[:300],
-                        )
-                    )
-        events.sort(key=lambda e: e.occurred_date, reverse=True)
-        return events
+                    event, clue = self._bind_candidate_event(item, allowed, parsed, store)
+                    if event is not None:
+                        formal.append(event)
+                        existing.add(doc_id)
+                    elif clue is not None:
+                        clues.append(clue)
+        formal.sort(key=lambda e: e.occurred_date, reverse=True)
+        return formal, clues
+
+    @staticmethod
+    def _clue(item: dict[str, Any], doc_id: str, reason: str) -> dict[str, Any]:
+        return {
+            "doc_id": doc_id or str(item.get("doc_id") or ""),
+            "title": str(item.get("title") or "")[:200],
+            "category": str(item.get("category") or ""),
+            "summary": str(item.get("summary") or "")[:500],
+            "evidence_quote": str(item.get("evidence_quote") or "")[:500],
+            "occurred_date": "",
+            "reason": reason,
+        }
+
+    def _bind_candidate_event(
+        self,
+        item: dict[str, Any],
+        allowed: dict[str, dict[str, Any]],
+        parsed: dict[str, Any],
+        store: Any,
+    ) -> tuple[RiskEvent | None, dict[str, Any] | None]:
+        """校验模型候选事件并绑定原文证据，返回 (正式事件, 待核实线索)。"""
+        from app.data.pdftext import find_quote_page, verify_evidence
+
+        doc_id = str(item.get("doc_id") or "")
+        title = str(item.get("title") or "").strip()[:200]
+        category = str(item.get("category") or "").strip()
+        summary = str(item.get("summary") or "").strip()[:500]
+        evidence_quote = str(item.get("evidence_quote") or "").strip()
+        resolved = item.get("resolved")
+        if not isinstance(resolved, bool) and resolved is not None:
+            resolved = None
+        resolution_note = str(item.get("resolution_note") or "").strip()[:300]
+        occurred_date = str(allowed[doc_id].get("date") or "")
+
+        def reject(reason: str) -> tuple[None, dict[str, Any]]:
+            return None, self._clue(
+                {
+                    "doc_id": doc_id, "title": title, "category": category,
+                    "summary": summary, "evidence_quote": evidence_quote,
+                },
+                doc_id,
+                reason,
+            )
+
+        if category not in EVENT_CATEGORIES:
+            return reject(f"事件类型「{category or '空'}」不在固定枚举中，已拒收")
+        if not evidence_quote:
+            return reject("模型未提供可引用的原文片段（evidence_quote 为空）")
+        if len(evidence_quote) > 500:
+            return reject("原文片段超过 500 字上限")
+        if not occurred_date:
+            return reject("程序未掌握该公告的日期，无法确定事件发生时间")
+
+        pdoc = parsed.get(doc_id)
+        if not pdoc or pdoc.error:
+            return reject("对应公告未完成正文解析，无法复核引文")
+        page = find_quote_page(pdoc, evidence_quote)
+        if page is None:
+            return reject("原文中未定位到完整引文（虚构引文或同前缀但尾部不符）")
+        ev = Evidence(
+            evidence_id=f"{doc_id}:p{page}:{Evidence.fingerprint_of(evidence_quote[:900])}",
+            doc_id=doc_id,
+            title=str(allowed[doc_id].get("title") or "")[:200],
+            quote=evidence_quote[:900],
+            location=f"第 {page} 页",
+            url=str(allowed[doc_id].get("url") or ""),
+            source=str(allowed[doc_id].get("source") or ""),
+            publish_date=occurred_date,
+            fingerprint=Evidence.fingerprint_of(evidence_quote[:900]),
+        )
+        verify_evidence(ev, pdoc)
+        if not ev.verified:
+            return reject("原文复核未通过（引文未出现在所标页码或指纹不一致）")
+        if store is not None:
+            store.add(ev, topics=["事件"], doc_type=str(allowed[doc_id].get("doc_type") or ""))
+
+        event = RiskEvent(
+            event_id=f"evt:ai:{doc_id}:{ev.fingerprint}",
+            title=title or str(allowed[doc_id].get("title") or "")[:200],
+            occurred_date=occurred_date,
+            category=category,
+            summary=summary,
+            source_doc_id=doc_id,
+            resolved=resolved,
+            resolution_note=resolution_note,
+            evidence_ids=[ev.evidence_id],
+        )
+        return event, None
 
     def _reverify_evidence(self, store: EvidenceStore, parsed: dict[str, Any]) -> int:
         """对每条证据做原文复核，未通过的标记为 unverified，报告必须可见。"""
@@ -498,6 +595,7 @@ class ScanPipeline:
         docs: list[DisclosureDoc] = kw["docs"]
         evidence_store: EvidenceStore = kw["evidence_store"]
         events = kw["events"]
+        pending_clues = kw.get("pending_clues", [])
 
         highest = Severity.UNKNOWN
         for o in output.outcomes:
@@ -596,6 +694,7 @@ class ScanPipeline:
                 if by_dimension.get(d)
             ],
             "timeline": [e.to_dict() for e in events],
+            "pending_clues": pending_clues,
             "mitigations": self._collect_mitigations(output),
             "gaps": list(dict.fromkeys(self.gaps)),
             "notes": list(dict.fromkeys(self.notes)),

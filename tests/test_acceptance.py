@@ -277,15 +277,19 @@ class AuditChecks(unittest.TestCase):
         pipe=ScanPipeline("event_test")
         fake=SimpleNamespace(available=True,extract_events=lambda x:LLMResult(True,data=[{"doc_id":"nonexistent","title":"虚构事件"}]))
         pipe.llm=fake
-        try:self.assertEqual(pipe._extract_events([d],{"doc1":p}),[])
+        try:formal, clues = pipe._extract_events([d],{"doc1":p})
         finally:pipe.close()
+        self.assertEqual(formal,[])
+        self.assertEqual(len(clues),1)
+        self.assertIn("不在本批输入", clues[0]["reason"])
 
     def test_32_llm_parse_failure_nonfatal(self):
         pipe=ScanPipeline("event_test")
         pipe.llm=SimpleNamespace(available=True,extract_events=lambda x:LLMResult(True,data=[]))
         try:
-            ev=pipe._extract_events([doc()],{"doc1":ParsedDoc("doc1",0,[],False,error="bad pdf")})
-            self.assertEqual(ev,[])
+            formal, clues = pipe._extract_events([doc()],{"doc1":ParsedDoc("doc1",0,[],False,error="bad pdf")})
+            self.assertEqual(formal,[])
+            self.assertEqual(clues,[])
         finally:pipe.close()
 
     def test_33_ai_downgrade_recomputes_coverage(self):
