@@ -1,0 +1,185 @@
+{
+  "checklist_version": "1.2",
+  "format_note": "人工标注格式：证券、数据快照、预期触发、禁止触发、证据位置、是否已解除、标注人、标注状态。尚未人工确认的条目 review_status=pending_review，不得编造预期/禁止触发标签，也不能算作通过样本。",
+  "entries": [
+    {
+      "secucode": "600519.SH", "code": "600519", "market": "A", "name": "贵州茅台",
+      "industry": "白酒", "industry_pack": "general",
+      "scenario_hint": "普通行业 · 盈利公司 · 审计意见误报保护",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "baseline",
+      "baseline_summary": "规则 1.1：评分 97/A，未触发高风险；审计意见误报保护、财务费用为负利息保障倍数不适用链路通过"
+    },
+    {
+      "secucode": "00700.HK", "code": "00700", "market": "HK", "name": "腾讯控股",
+      "industry": "互联网", "industry_pack": "general",
+      "scenario_hint": "港股 · 币种核实 · 可用现金口径 · 性能基准",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "baseline",
+      "baseline_summary": "规则 1.1：评分 100/A；财报币种核实为 CNY，可用现金口径修正；1,234 条事实、168 条公告、25 份 PDF、50/50 证据、52 项规则"
+    },
+    {
+      "secucode": "000002.SZ", "code": "000002", "market": "A", "name": "万科A",
+      "industry": "房地产", "industry_pack": "realestate",
+      "scenario_hint": "地产 · 亏损 · 负利润 · 持续经营",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "baseline",
+      "baseline_summary": "规则 1.1：评分 24/E；4 项风险、8 项关注、8 项数据不足；亏损、持续经营审计信号及缺失地产科目按新口径处理"
+    },
+    {
+      "secucode": "600036.SH", "code": "600036", "market": "A", "name": "招商银行",
+      "industry": "银行", "industry_pack": "bank",
+      "scenario_hint": "银行 · 资本充足率数据能力口径",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "601398.SH", "code": "601398", "market": "A", "name": "工商银行",
+      "industry": "银行", "industry_pack": "bank",
+      "scenario_hint": "银行 · 存贷比与资本充足率",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "000001.SZ", "code": "000001", "market": "A", "name": "平安银行",
+      "industry": "银行", "industry_pack": "bank",
+      "scenario_hint": "银行 · 资产质量与拨备数据能力",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "00939.HK", "code": "00939", "market": "HK", "name": "建设银行",
+      "industry": "银行", "industry_pack": "bank",
+      "scenario_hint": "港股银行 · 繁体披露与资本充足率",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "03988.HK", "code": "03988", "market": "HK", "name": "中国银行",
+      "industry": "银行", "industry_pack": "bank",
+      "scenario_hint": "港股银行 · 存贷比",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "601318.SH", "code": "601318", "market": "A", "name": "中国平安",
+      "industry": "保险", "industry_pack": "insurance",
+      "scenario_hint": "保险 · 偿付能力数据能力口径",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "601628.SH", "code": "601628", "market": "A", "name": "中国人寿",
+      "industry": "保险", "industry_pack": "insurance",
+      "scenario_hint": "保险 · 赔付率与准备金",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "02318.HK", "code": "02318", "market": "HK", "name": "中国平安",
+      "industry": "保险", "industry_pack": "insurance",
+      "scenario_hint": "港股保险 · 已赚保费与偿付能力",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "02628.HK", "code": "02628", "market": "HK", "name": "中国人寿",
+      "industry": "保险", "industry_pack": "insurance",
+      "scenario_hint": "港股保险 · 繁体披露赔付率",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "600030.SH", "code": "600030", "market": "A", "name": "中信证券",
+      "industry": "券商", "industry_pack": "broker",
+      "scenario_hint": "券商 · 净资本数据能力口径",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "600837.SH", "code": "600837", "market": "A", "name": "海通证券",
+      "industry": "券商", "industry_pack": "broker",
+      "scenario_hint": "券商 · 回购融资杠杆",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "06886.HK", "code": "06886", "market": "HK", "name": "华泰证券",
+      "industry": "券商", "industry_pack": "broker",
+      "scenario_hint": "港股券商 · 代理买卖证券款",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "600048.SH", "code": "600048", "market": "A", "name": "保利发展",
+      "industry": "房地产", "industry_pack": "realestate",
+      "scenario_hint": "地产 · 剔除预收负债率 · 存货去化",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "01109.HK", "code": "01109", "market": "HK", "name": "华润置地",
+      "industry": "房地产", "industry_pack": "realestate",
+      "scenario_hint": "港股地产 · 繁体披露剔除预收负债率",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "02007.HK", "code": "02007", "market": "HK", "name": "碧桂园",
+      "industry": "房地产", "industry_pack": "realestate",
+      "scenario_hint": "港股地产 · 负利润/持续经营风险样本",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "000333.SZ", "code": "000333", "market": "A", "name": "美的集团",
+      "industry": "家电", "industry_pack": "general",
+      "scenario_hint": "普通行业 · 盈利 · 商誉与资本开支",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "01088.HK", "code": "01088", "market": "HK", "name": "中国神华",
+      "industry": "能源", "industry_pack": "general",
+      "scenario_hint": "普通行业 · 盈利 · 现金流与资本开支",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "601288.SH", "code": "601288", "market": "A", "name": "农业银行",
+      "industry": "银行", "industry_pack": "bank",
+      "scenario_hint": "银行 · 资本充足率数据能力",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    },
+    {
+      "secucode": "601688.SH", "code": "601688", "market": "A", "name": "华泰证券",
+      "industry": "券商", "industry_pack": "broker",
+      "scenario_hint": "券商 · 信用业务风险数据能力",
+      "data_snapshot": {"reporting_period": "", "currency": "CNY"},
+      "expected_triggers": [], "forbidden_triggers": [], "evidence_location": "",
+      "resolved": null, "annotator": "", "review_status": "pending_review", "baseline_summary": ""
+    }
+  ]
+}
