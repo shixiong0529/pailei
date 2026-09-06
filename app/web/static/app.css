@@ -66,6 +66,10 @@ th{color:var(--muted);font-weight:600;font-size:12.5px;background:#f8fafc}
 .badge.部分完成{background:#fef3c7;color:#92400e}
 .badge.失败{background:#fee2e2;color:#991b1b}
 .badge.取消{background:#f1f5f9;color:#64748b}
+.badge.生成成功{background:#dcfce7;color:#166534}
+.badge.超时{background:#fef3c7;color:#92400e}
+.badge.生成失败{background:#fee2e2;color:#991b1b}
+.badge.cov{background:#ede9fe;color:#6d28d9;margin-left:4px}
 
 /* 扫描进度 */
 .stages{list-style:none;padding:0;margin:0}

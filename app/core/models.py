@@ -279,12 +279,45 @@ EVENT_CATEGORIES = [
 
 
 class TaskStatus(str, Enum):
+    """任务状态：是否成功生成，与「报告覆盖程度」分离表达。
+
+    旧值「完成 / 部分完成 / 失败」不再作为新任务写入；历史行保留原值，
+    展示时通过 display_status() 映射为 V1.2 口径。
+    """
+
     QUEUED = "排队"
     RUNNING = "运行"
-    PARTIAL = "部分完成"
-    SUCCEEDED = "完成"
-    FAILED = "失败"
+    SUCCEEDED = "生成成功"   # 报告已生成（无论覆盖是否完整）
+    TIMEOUT = "超时"          # 达到期限，仍生成带缺口的报告
+    FAILED = "生成失败"
     CANCELLED = "取消"
+
+
+class CoverageLevel(str, Enum):
+    """报告覆盖程度：与任务状态分离，单独表达数据覆盖缺口严重度。"""
+
+    COMPLETE = "完整"
+    MINOR = "一般缺口"
+    CRITICAL = "关键缺口"
+
+
+# 旧任务状态的展示兼容映射（不修改历史数据，只在读取展示时转换）。
+LEGACY_STATUS_LABELS = {
+    "完成": TaskStatus.SUCCEEDED.value,
+    "部分完成": TaskStatus.SUCCEEDED.value,
+    "失败": TaskStatus.FAILED.value,
+}
+
+
+def display_status(status: str | None) -> str:
+    """把历史任务状态映射为 V1.2 口径展示名；新状态原样返回。"""
+    s = status or ""
+    return LEGACY_STATUS_LABELS.get(s, s)
+
+
+def task_is_done(status: str | None) -> bool:
+    """任务是否已结束（生成成功 / 超时，以及历史「完成/部分完成」均为终态）。"""
+    return (status or "") in {"生成成功", "超时", "完成", "部分完成"}
 
 
 class Stage(str, Enum):

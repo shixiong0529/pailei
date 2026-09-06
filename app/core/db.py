@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS scan_tasks (
     secucode       TEXT,
     market         TEXT,
     status         TEXT NOT NULL,
+    coverage_level TEXT,
     stage          TEXT,
     stage_index    INTEGER DEFAULT 0,
     progress       TEXT,
@@ -219,6 +220,7 @@ def init_db() -> None:
         conn.executescript(SCHEMA)
         # 向后兼容迁移：历史行未知字段保持 NULL，不伪造审计/口径属性。
         for table, columns in {
+            "scan_tasks": {"coverage_level": "TEXT"},
             "financial_facts": {"period_start": "TEXT", "audited": "INTEGER", "consolidated": "INTEGER"},
             "fetch_logs": {"record_id": "TEXT"},
             "risk_events": {
@@ -300,10 +302,13 @@ def list_tasks(limit: int = 50) -> list[dict[str, Any]]:
 
 
 def find_recent_task(query: str, within_minutes: int = 60, rule_version: str | None = None) -> dict[str, Any] | None:
-    """对重复提交去重：同一查询在短时间内且已完成的任务可复用。"""
+    """对重复提交去重：同一查询在短时间内且已生成报告的任务可复用。
+
+    仅复用成功生成（含超时但仍产出报告）的任务；失败/运行中任务不参与去重。
+    """
     with connect() as conn:
         row = conn.execute(
-            "SELECT * FROM scan_tasks WHERE query=? AND status IN ('完成','部分完成') "
+            "SELECT * FROM scan_tasks WHERE query=? AND status IN ('生成成功','超时') "
             "AND (? IS NULL OR rule_version=?) ORDER BY created_at DESC LIMIT 1",
             (query, rule_version, rule_version),
         ).fetchone()

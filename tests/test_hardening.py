@@ -229,7 +229,7 @@ class HardeningTests(unittest.TestCase):
 
     def test_partial_result_cache_reused(self):
         from app.main import app
-        db.create_task('partial','600519');db.update_task('partial',status=TaskStatus.PARTIAL.value,rule_version='1.1')
+        db.create_task('partial','600519');db.update_task('partial',status=TaskStatus.SUCCEEDED.value,coverage_level='一般缺口',rule_version='1.1')
         with TestClient(app) as c:r=c.post('/api/scan',json={'query':'600519'}).json()
         self.assertEqual(r['task_id'],'partial');self.assertTrue(r['reused'])
 

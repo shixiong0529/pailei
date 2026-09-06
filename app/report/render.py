@@ -146,7 +146,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     # 旧版本未记录的可选展示元数据，在输入边界显式提供兼容默认；模板仍严格检查变量名。
     defaults = {
         "security": {"exchange": "", "industry": "", "currency": ""},
-        "scan": {"started_at": "", "status": "", "timed_out": False},
+        "scan": {"started_at": "", "status": "", "timed_out": False, "coverage_level": ""},
         "data_scope": {"announcement_range": "", "announcement_fetched": 0, "documents_downloaded": 0,
                        "evidence_count": 0, "evidence_verified": 0, "latest_period_label": "", "latest_period": ""},
         "summary": {"risk_count": 0, "watch_count": 0, "insufficient_count": 0, "highest_severity": "未定", "top_findings": []},
@@ -165,7 +165,8 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
                 result.setdefault(key, value)
     # V1.2 生命周期字段：旧报告或测试载荷的时间线条目可能缺少这些键，渲染前补齐默认。
     for ev in payload.get("timeline") or []:
-        for key, value in {"lifecycle_stage": "", "summary": "", "resolved": None,
+        for key, value in {"event_id": "", "title": "", "occurred_date": "", "category": "",
+                           "lifecycle_stage": "", "summary": "", "resolved": None,
                            "resolution_note": "", "resolution_basis": "", "resolution_date": "",
                            "evidence_ids": []}.items():
             ev.setdefault(key, value)
@@ -191,7 +192,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     evaluated = sum(r.get("status") in {"发现风险", "需要关注", "已覆盖资料中未发现明显异常"}
                     for dim in dimensions for r in dim.get("results") or [])
     if coverage.get("evaluated", evaluated) == 0 or evaluated == 0:
-        risk_score.update(score="—", grade="—", label="资料不足，暂不形成评级")
+        risk_score.update(score="—", grade="—", label="资料不足，暂不形成风险信号密度评分")
     elif summary.get("insufficient_count") or payload.get("gaps"):
         if risk_score["grade"] == "A":
             risk_score["label"] = "已覆盖项目风险信号较少，仍有资料缺口"
@@ -205,6 +206,12 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     evidence_map = payload.get("evidence") or {}
     documents = payload.get("documents") or []
 
+    # V1.2：证据复核率（独立于覆盖率的可信度指标）。
+    data_scope = payload.get("data_scope") or {}
+    evidence_count = int(data_scope.get("evidence_count") or 0)
+    evidence_verified = int(data_scope.get("evidence_verified") or 0)
+    evidence_rate = round(evidence_verified / evidence_count * 100, 1) if evidence_count else None
+
     return {
         "payload": payload,
         "current_rule_version": RULE_VERSION,
@@ -214,6 +221,8 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
         "data_scope": payload.get("data_scope") or {},
         "summary": summary,
         "coverage": coverage,
+        "coverage_level": (payload.get("scan") or {}).get("coverage_level") or "",
+        "evidence_rate": evidence_rate,
         "metrics": metrics,
         "industry_pack": payload.get("industry_pack") or "general",
         "chart_blocks": chart_blocks,

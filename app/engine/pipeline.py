@@ -4,7 +4,7 @@
 6 专项阅读 → 7 核验 → 8 报告生成。
 
 每个阶段写入检查点（数据库），进程重启后可继续或安全重试；
-超时按当前进度生成带缺口的“部分完成”报告，不静默省略。
+超时按当前进度生成带缺口的报告（任务状态记为「超时」、覆盖等级单独表达），不静默省略。
 """
 
 from __future__ import annotations
@@ -42,6 +42,7 @@ from app.data.identity import IdentityResolver
 from app.data.pdftext import build_evidence, parse_pdf
 from app.engine.metrics import compute_metrics
 from app.engine.normalize import FactSet
+from app.engine import gaps
 from app.engine import lifecycle
 from app.engine.runner import (
     EngineOutput,
@@ -275,6 +276,7 @@ class ScanPipeline:
         self._checkpoint(Stage.REPORT)
         elapsed = time.time() - started
         timed_out = self._time_left() <= 0
+        coverage_level = gaps.coverage_level_of(self.gaps)
         payload = self._build_payload(
             security=security,
             company=company.to_dict() if company else None,
@@ -294,6 +296,7 @@ class ScanPipeline:
             elapsed=elapsed,
             timed_out=timed_out,
             verification_count=verified_count,
+            coverage_level=coverage_level,
             network=summarize_records(self.http.records),
         )
         html_path, json_path = render_report(payload)
@@ -304,15 +307,12 @@ class ScanPipeline:
         db.save_evidences(self.task_id, evidence_store.items.values())
         db.save_fetch_logs(self.task_id, self.http.records)
 
-        status = TaskStatus.PARTIAL if (timed_out or self.gaps) else TaskStatus.SUCCEEDED
-        if not any(
-            o.status in (RuleStatus.RISK, RuleStatus.WATCH, RuleStatus.NORMAL)
-            for o in output.outcomes
-        ):
-            status = TaskStatus.PARTIAL
+        # 任务状态与覆盖程度分离：状态只表达「是否成功生成」，覆盖缺口另列覆盖等级。
+        status = TaskStatus.TIMEOUT if timed_out else TaskStatus.SUCCEEDED
         db.update_task(
             self.task_id,
             status=status.value,
+            coverage_level=coverage_level,
             stage=Stage.REPORT.value,
             stage_index=len(STAGE_ORDER),
             finished_at=now_iso(),
@@ -323,7 +323,7 @@ class ScanPipeline:
         return ScanResult(
             self.task_id, status, payload,
             html_path=html_path, json_path=json_path,
-            message="带有缺口的完整报告" if status is TaskStatus.PARTIAL else "完成",
+            message="生成成功（存在数据覆盖缺口）" if (self.gaps or timed_out) else "生成成功",
         )
 
     # ------------------------------------------------------------ 阶段实现
@@ -752,6 +752,7 @@ class ScanPipeline:
         pending_clues = kw.get("pending_clues", [])
         lifecycles = kw.get("lifecycles", [])
         trace_back = kw.get("trace_back")
+        coverage_level = kw.get("coverage_level") or gaps.coverage_level_of(self.gaps)
 
         highest = Severity.UNKNOWN
         for o in output.outcomes:
@@ -795,6 +796,7 @@ class ScanPipeline:
                 "elapsed_seconds": round(kw["elapsed"], 1),
                 "timed_out": kw["timed_out"],
                 "status": "",
+                "coverage_level": coverage_level,
             },
             "security": security.to_dict(),
             "company": kw["company"],
@@ -855,6 +857,10 @@ class ScanPipeline:
             "pending_clues": pending_clues,
             "mitigations": self._collect_mitigations(output),
             "gaps": list(dict.fromkeys(self.gaps)),
+            "gap_details": [
+                {"severity": gaps.classify_gap(g).value, "message": g}
+                for g in dict.fromkeys(self.gaps)
+            ],
             "notes": list(dict.fromkeys(self.notes)),
             "financial_facts": [f.to_dict() for f in facts.facts],
             "missing_data": self._collect_missing(output),
@@ -876,7 +882,7 @@ class ScanPipeline:
                 ),
             },
         }
-        payload["scan"]["status"] = "部分完成" if (kw["timed_out"] or self.gaps) else "完成"
+        payload["scan"]["status"] = TaskStatus.TIMEOUT.value if kw["timed_out"] else TaskStatus.SUCCEEDED.value
         return payload
 
     def _build_trends(self, facts: FactSet) -> dict[str, list[dict[str, Any]]]:

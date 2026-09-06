@@ -78,15 +78,17 @@ a:hover{text-decoration:underline}
   border-radius:12px;padding:16px 20px;margin:0 0 12px;background:#f8fafc}
 .score-main{display:flex;align-items:center;gap:12px}
 .score-num{font-size:44px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.score-grade{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;
-  border-radius:10px;font-size:20px;font-weight:700;color:#fff}
-.score-grade.g-a{background:#16a34a}.score-grade.g-b{background:#2563eb}
-.score-grade.g-c{background:#d97706}.score-grade.g-d{background:#ea580c}
-.score-grade.g-e{background:#dc2626}
 .score-side{flex:1;min-width:240px}
 .score-label{font-weight:600;font-size:14.5px}
 .score-comp{color:var(--muted);font-size:13px;margin-top:3px;line-height:1.6}
 .score-note{color:var(--faint);font-size:12px;margin:6px 0 14px}
+.summary-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin:0 0 14px}
+.s-item{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.s-item .s-k{color:var(--muted);font-size:12px}
+.s-item .s-v{font-size:20px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+.score-box.density{border-style:dashed;background:#fff;margin-bottom:4px}
+.score-box.density .score-num{font-size:28px;color:var(--muted)}
+.score-box.density .score-label{color:var(--muted);font-weight:500;font-size:13px}
 .tag{display:inline-block;background:#f1f5f9;color:#475569;border-radius:6px;
   padding:1px 7px;font-size:12px;margin-right:6px}
 .toc{list-style:none;padding:0;margin:0}
@@ -123,7 +125,6 @@ section{scroll-margin-top:16px}
   .score-box{align-items:stretch;gap:12px;padding:14px;background:linear-gradient(135deg,#f8fafc,#eff6ff)}
   .score-main{gap:10px}
   .score-num{font-size:40px}
-  .score-grade{width:34px;height:34px;font-size:18px}
   .score-side{min-width:0;flex-basis:100%}
   .score-label{font-size:14px;line-height:1.5}
   .score-comp{font-size:12.5px;line-height:1.65}
@@ -220,20 +221,25 @@ section{scroll-margin-top:16px}
   <h2><span class="idx">01</span>风险总览</h2>
   <p class="hint">最重要的结论一页速览；点击检查项名称跳转到第 03 节查看完整证据链。</p>
 
-  <div class="score-box">
-    <div class="score-main">
-      <span class="score-num">{{ risk_score.score }}</span>
-      <span class="score-grade g-{{ risk_score.grade|lower }}">{{ risk_score.grade }}</span>
-    </div>
+  <div class="summary-strip">
+    <div class="s-item"><div class="s-k">最高已确认风险</div><div class="s-v">{{ summary.highest_severity }}</div></div>
+    <div class="s-item"><div class="s-k">风险 / 关注</div><div class="s-v">{{ summary.risk_count }} / {{ summary.watch_count }}</div></div>
+    <div class="s-item"><div class="s-k">有效覆盖率</div><div class="s-v">{{ coverage.evaluated }}/{{ coverage.applicable }}</div></div>
+    <div class="s-item"><div class="s-k">证据复核率</div><div class="s-v">{% if evidence_rate is not none %}{{ evidence_rate }}%{% else %}—{% endif %}</div></div>
+    <div class="s-item"><div class="s-k">覆盖等级</div><div class="s-v">{{ coverage_level or '—' }}</div></div>
+  </div>
+
+  <div class="score-box density">
+    <div class="score-main"><span class="score-num">{{ risk_score.score }}</span></div>
     <div class="score-side">
-      <div class="score-label">风险信号评分 · {{ risk_score.label }}</div>
+      <div class="score-label">风险信号密度（次要指标）</div>
       <div class="score-comp">
-        基础分 100 · 发现风险 −{{ risk_score.risk_deduction }}（{{ risk_score.risk_comp }}）
+        发现风险 −{{ risk_score.risk_deduction }}（{{ risk_score.risk_comp }}）
         · 需要关注 −{{ risk_score.watch_deduction }}（{{ risk_score.watch_comp }}）
       </div>
     </div>
   </div>
-  <p class="score-note">评分为检查项扣分加权汇总，反映风险信号密度，不代表投资价值或违约概率。</p>
+  <p class="score-note">风险信号密度为检查项扣分加权汇总，仅反映已覆盖资料的信号密集程度，不代表公司评级、投资价值或违约概率。</p>
 
   <p class="hint">适用检查 {{ coverage.applicable }} 项，已形成判断 {{ coverage.evaluated }} 项，
     <b>{{ summary.insufficient_count }}</b> 项数据不足。扫描状态：{{ scan.status or '未记录' }}。
@@ -243,7 +249,7 @@ section{scroll-margin-top:16px}
     本次在已获取资料范围内发现 <b>{{ summary.risk_count }}</b> 项风险、
     <b>{{ summary.watch_count }}</b> 项需关注事项，
     另有 <b>{{ summary.insufficient_count }}</b> 项因数据不足无法判断。
-    最高风险等级：<b>{{ summary.highest_severity }}</b>。
+    最高已确认风险：<b>{{ summary.highest_severity }}</b>。
   </div>
   {% else %}
   <div class="info">

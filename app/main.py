@@ -21,7 +21,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from app.config import settings
 from app.core import db
 from app.core.http_client import HttpClient
-from app.core.models import STAGE_DETAIL, STAGE_ORDER, Stage, TaskStatus
+from app.core.models import STAGE_DETAIL, STAGE_ORDER, Stage, TaskStatus, display_status, task_is_done
 from app.data.eastmoney import EastmoneyClient
 from app.data.identity import IdentityResolver
 from app.engine.pipeline import ScanPipeline
@@ -50,6 +50,9 @@ env = Environment(
     trim_blocks=True,
     lstrip_blocks=True,
 )
+# V1.2：任务状态与覆盖程度分离后的展示辅助（兼容旧「完成/部分完成/失败」状态）。
+env.globals["status_label"] = display_status
+env.globals["task_done"] = task_is_done
 
 MAX_WORKERS = 5
 executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
@@ -231,7 +234,9 @@ def task_status(task_id: str):
         {
             "ok": True,
             "task_id": task_id,
-            "status": task.get("status"),
+            "status": display_status(task.get("status")),
+            "coverage_level": task.get("coverage_level") or "",
+            "done": task_is_done(task.get("status")),
             "stage": task.get("stage"),
             "stage_index": task.get("stage_index") or 0,
             "query": task.get("query"),

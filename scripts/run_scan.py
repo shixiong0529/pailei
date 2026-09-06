@@ -47,7 +47,8 @@ def main() -> int:
     d = result.payload["data_scope"]
     print(f"\n公司：{result.payload['security']['org_name']} "
           f"({result.payload['security']['secucode']})")
-    print(f"最高风险等级：{s['highest_severity']}")
+    print(f"最高已确认风险：{s['highest_severity']}")
+    print(f"覆盖等级：{result.payload['scan'].get('coverage_level') or '—'}")
     print(f"风险 {s['risk_count']} 项 · 关注 {s['watch_count']} 项 · 数据不足 {s['insufficient_count']} 项")
     print(f"覆盖：{s['coverage']['evaluated']}/{s['coverage']['applicable']} 适用检查项")
     print(f"公告 {d['announcement_fetched']} 条 · 下载 {d['documents_downloaded']} 份 · "
