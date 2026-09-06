@@ -8,8 +8,8 @@ body{margin:0;background:var(--bg);color:var(--text);
   line-height:1.65;font-size:15px}
 a{color:var(--primary);text-decoration:none}
 a:hover{text-decoration:underline}
-.nav{background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);border-bottom:0;
-  position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(37,99,235,.22)}
+.nav{background:#1e3a8a;border-bottom:0;
+  position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(30,58,138,.25)}
 .nav-inner{max-width:960px;margin:0 auto;padding:16px 18px;display:flex;align-items:center;
   justify-content:space-between;gap:16px}
 .brand{font-weight:700;font-size:16px;color:#fff;display:flex;align-items:center;gap:9px}
