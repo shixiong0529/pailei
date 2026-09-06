@@ -110,10 +110,9 @@ class IdentityResolver:
         for item in raw:
             code = str(item.get("Code") or "").strip()
             name = str(item.get("Name") or "").strip()
-            classify = str(item.get("Classify") or "")
-            if classify not in {"A", "AStock", "HK"} or not code or not name:
+            market = _sec_market(item)
+            if market is None or not code or not name:
                 continue
-            market = Market.HK if classify == "HK" else Market.A
             if market is Market.A and not code.isdigit():
                 continue
             secucode = f"{code}.HK" if market is Market.HK else self._a_secucode(code)
@@ -315,10 +314,9 @@ class IdentityResolver:
         for item in raw:
             code = str(item.get("Code") or "").strip()
             name = str(item.get("Name") or "").strip()
-            classify = str(item.get("Classify") or "")
-            if classify not in {"A", "AStock", "HK"}:
+            market = _sec_market(item)
+            if market is None:
                 continue
-            market = Market.HK if classify == "HK" else Market.A
             if market is not target_market or not code:
                 continue
             # A 股必须是 6 位数字代码；港股为 5 位数字。过滤掉非标准代码，避免误关联。
@@ -352,6 +350,21 @@ class IdentityResolver:
     def _company_id(self, security: Security) -> str:
         base = security.org_name or security.name
         return f"{security.market.value}:{base}"
+
+
+def _sec_market(item: dict[str, Any]) -> Market | None:
+    """从搜索条目识别市场；无法识别（指数/基金/债券等）返回 None。
+
+    东方财富 suggest 接口的 Classify 字段对科创板返回交易所代码（如 "23"）
+    而非 "AStock"，必须结合 SecurityTypeName（沪A/深A/京A/科创板/港股）判断。
+    """
+    classify = str(item.get("Classify") or "")
+    sec_type = str(item.get("SecurityTypeName") or "")
+    if classify == "HK" or sec_type == "港股":
+        return Market.HK
+    if classify in {"A", "AStock"} or sec_type in {"沪A", "深A", "京A", "科创板"}:
+        return Market.A
+    return None
 
 
 def _score(query: str, code_q: str, code: str, name: str) -> tuple[int, str]:

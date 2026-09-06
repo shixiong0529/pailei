@@ -82,6 +82,8 @@ class CninfoClient:
                     return org_id, "sse"
                 if org_id.startswith("gssz"):
                     return org_id, "szse"
+                if org_id.startswith("gfbj"):
+                    return org_id, "bj"
                 return org_id, "szse"
         # 退回构造（仅限沪市，构造规则已验证；其余市场视为无法确认）
         if code.startswith(("60", "68")):

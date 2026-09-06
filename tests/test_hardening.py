@@ -19,7 +19,8 @@ from app.config import settings, LLMConfig
 from app.core import db
 from app.core.http_client import HttpClient, FetchError, FetchRecord, PublicNetworkBackend
 from app.core.models import *
-from app.data.identity import IdentityResolver
+from app.data.identity import IdentityResolver, _sec_market
+from app.data.cninfo import CninfoClient
 from app.data.eastmoney import _period_start, _hk_rows_to_facts, HK_BALANCE_MAP, _num
 from app.data.pdftext import ParsedDoc, parse_pdf, verify_evidence
 from app.engine.currency import verify_reporting_currencies
@@ -52,6 +53,60 @@ class HardeningTests(unittest.TestCase):
         with IdentityResolver(em) as r:
             result=r.resolve('000001.SZ')
         self.assertTrue(result.ok);self.assertEqual(result.selected.name,'平安银行')
+
+    def test_star_market_classify_23_recognized(self):
+        # 科创板股票的 Classify 字段是交易所代码 "23" 而非 "AStock"，曾导致被过滤
+        em=Mock()
+        em.search.return_value=[{'Code':'688981','Name':'中芯国际','Classify':'23','SecurityTypeName':'科创板'}]
+        em.resolve_suffix.return_value='SH'
+        em.a_profile.return_value={'SECUCODE':'688981.SH','ORG_NAME':'中芯国际集成电路制造有限公司','CSRC_INDUSTRY_NAME':'制造业'}
+        with IdentityResolver(em) as r:
+            result=r.resolve('688981')
+        self.assertTrue(result.ok)
+        self.assertEqual(result.selected.secucode,'688981.SH')
+        self.assertEqual(result.selected.exchange,'上海证券交易所')
+
+    def test_bse_classify_neeq_recognized(self):
+        # 北交所股票的 Classify 字段是 "NEEQ" 而非 "AStock"，曾导致被过滤
+        em=Mock()
+        em.search.return_value=[{'Code':'920799','Name':'艾融软件','Classify':'NEEQ','SecurityTypeName':'京A'}]
+        em.resolve_suffix.return_value='BJ'
+        em.a_profile.return_value={'SECUCODE':'920799.BJ','ORG_NAME':'上海艾融软件股份有限公司','CSRC_INDUSTRY_NAME':'软件和信息技术服务业'}
+        with IdentityResolver(em) as r:
+            result=r.resolve('920799')
+        self.assertTrue(result.ok)
+        self.assertEqual(result.selected.secucode,'920799.BJ')
+        self.assertEqual(result.selected.exchange,'北京证券交易所')
+
+    def test_cninfo_resolve_org_bse_prefix(self):
+        # 北交所 orgId 前缀为 gfbj，须映射为 column=bj（曾兜底成 szse 导致公告取不到）
+        cases=[
+            ([{'code':'920799','orgId':'gfbj0830799'}], '920799', ('gfbj0830799','bj')),
+            ([{'code':'600519','orgId':'gssh0600519'}], '600519', ('gssh0600519','sse')),
+            ([{'code':'000002','orgId':'gssz0000002'}], '000002', ('gssz0000002','szse')),
+        ]
+        for hits, code, expected in cases:
+            with self.subTest(code=code):
+                with patch.object(CninfoClient, 'search', return_value=hits):
+                    c=CninfoClient()
+                    try:
+                        self.assertEqual(c.resolve_org(code), expected)
+                    finally:
+                        c.close()
+
+    def test_sec_market_classifies_all_boards(self):
+        cases=[
+            ({'Classify':'AStock','SecurityTypeName':'沪A'}, Market.A),
+            ({'Classify':'AStock','SecurityTypeName':'深A'}, Market.A),
+            ({'Classify':'23','SecurityTypeName':'科创板'}, Market.A),
+            ({'Classify':'NEEQ','SecurityTypeName':'京A'}, Market.A),
+            ({'Classify':'HK','SecurityTypeName':'港股'}, Market.HK),
+            ({'Classify':'Index','SecurityTypeName':'指数'}, None),
+            ({'Classify':'OTCFUND','SecurityTypeName':'基金'}, None),
+        ]
+        for item, expected in cases:
+            with self.subTest(item=item):
+                self.assertEqual(_sec_market(item), expected)
 
     def test_single_fuzzy_candidate_requires_confirmation(self):
         em=Mock();em.search.return_value=[{'Code':'600519','Name':'贵州茅台','Classify':'AStock'}];em.resolve_suffix.return_value='SH'
