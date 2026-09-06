@@ -182,6 +182,12 @@ CREATE TABLE IF NOT EXISTS llm_usage (
     cost_cny     REAL,
     created_at   TEXT
 );
+
+CREATE TABLE IF NOT EXISTS llm_cache (
+    cache_key   TEXT PRIMARY KEY,
+    payload     TEXT,
+    created_at  TEXT
+);
 """
 
 _lock = threading.Lock()
@@ -464,6 +470,35 @@ def save_llm_usage(
             " VALUES (?,?,?,?,?,?,?)",
             (task_id, step, model, tin, tout, cost, datetime.now().isoformat(timespec="seconds")),
         )
+
+
+def save_llm_cache(cache_key: str, payload: dict[str, Any]) -> None:
+    """持久化模型结果缓存。内容不包含任何密钥。"""
+    with _lock, tx() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO llm_cache (cache_key, payload, created_at) VALUES (?,?,?)",
+            (cache_key, json.dumps(payload, ensure_ascii=False),
+             datetime.now().isoformat(timespec="seconds")),
+        )
+
+
+def get_llm_cache(cache_key: str) -> dict[str, Any] | None:
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT payload FROM llm_cache WHERE cache_key=?", (cache_key,)
+        ).fetchone()
+    if not row:
+        return None
+    try:
+        return json.loads(row["payload"])
+    except json.JSONDecodeError:
+        return None
+
+
+def llm_cache_count() -> int:
+    with connect() as conn:
+        row = conn.execute("SELECT COUNT(*) n FROM llm_cache").fetchone()
+    return int(row["n"]) if row else 0
 
 
 # ------------------------------------------------------------------- 明细读取

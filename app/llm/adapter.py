@@ -23,6 +23,12 @@ import httpx
 from app.config import LLMConfig, settings
 from app.core.db import save_llm_usage
 from app.core.http_client import HttpClient, FetchError
+from app.llm import cache
+
+# 提示词版本：改动任何业务提示词（system/user 文案、字段要求）时递增，使旧缓存失效。
+PROMPT_VERSION = "1"
+# 校验版本：改动返回结构的校验规则时递增，使旧缓存失效。
+VALIDATION_VERSION = "1"
 
 
 @dataclass
@@ -34,6 +40,7 @@ class LLMResult:
     output_tokens: int = 0
     cost_cny: float = 0.0
     skipped_reason: str = ""
+    cached: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -43,6 +50,7 @@ class LLMResult:
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
             "cost_cny": round(self.cost_cny, 4),
+            "cached": self.cached,
         }
 
 
@@ -58,6 +66,7 @@ class LLMAdapter:
         self.task_id = task_id
         self.spent_cny = 0.0
         self.calls = 0
+        self.cache_hits = 0
         self.failures: list[str] = []
         self.deadline: float | None = None
         self._reserved_cny = 0.0
@@ -121,6 +130,52 @@ class LLMAdapter:
     # ------------------------------------------------------------ 调用
 
     def chat_json(
+        self,
+        system: str,
+        user: str,
+        *,
+        step: str = "",
+        max_tokens: Optional[int] = None,
+    ) -> LLMResult:
+        """带持久化缓存的模型调用。
+
+        - 同键并发去重：同一缓存键的并发请求只触发一次模型调用；
+        - 缓存命中返回一致的结构化结果，不计入本次调用与成本；
+        - 失败（截断、HTTP 错误、无法解析、结构非法）不写入缓存。
+        """
+        if not self.available:
+            return LLMResult(ok=False, skipped_reason=self.unavailable_reason)
+        key = cache.compute_cache_key(
+            self.config, system, user, step=step, max_tokens=max_tokens,
+            prompt_version=PROMPT_VERSION, validation_version=VALIDATION_VERSION,
+        )
+        with cache.key_lock(key):
+            cached = cache.get(key)
+            if cached is not None and cached.get("validation_version") == VALIDATION_VERSION:
+                with self._state_lock:
+                    self.cache_hits += 1
+                return LLMResult(
+                    ok=True,
+                    data=cached.get("data"),
+                    input_tokens=cached.get("input_tokens", 0),
+                    output_tokens=cached.get("output_tokens", 0),
+                    cost_cny=cached.get("cost_cny", 0.0),
+                    cached=True,
+                )
+            result = self._chat_json_uncached(system, user, step=step, max_tokens=max_tokens)
+            # 仅缓存成功且结构合法（本工程所有业务步骤均期待 JSON 数组）的结果。
+            if result.ok and isinstance(result.data, list) and not result.error:
+                cache.put(
+                    key,
+                    data=result.data,
+                    input_tokens=result.input_tokens,
+                    output_tokens=result.output_tokens,
+                    cost_cny=result.cost_cny,
+                    validation_version=VALIDATION_VERSION,
+                )
+            return result
+
+    def _chat_json_uncached(
         self,
         system: str,
         user: str,
@@ -385,6 +440,7 @@ class LLMAdapter:
     def usage_summary(self) -> dict[str, Any]:
         with self._state_lock:
             calls = self.calls
+            cache_hits = self.cache_hits
             spent_cny = self.spent_cny
             failures = list(self.failures)
         return {
@@ -392,6 +448,7 @@ class LLMAdapter:
             "available": self.available,
             "reason": "" if self.available else self.unavailable_reason,
             "calls": calls,
+            "cache_hits": cache_hits,
             "spent_cny": round(spent_cny, 4),
             "failures": list(dict.fromkeys(failures)),
         }

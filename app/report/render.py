@@ -156,7 +156,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     }
     for key, fallback in defaults.items():
         payload[key] = {**fallback, **(payload.get(key) or {})}
-    payload["ai"]["usage"] = {"available": False, "model": "", "calls": 0, "spent_cny": 0,
+    payload["ai"]["usage"] = {"available": False, "model": "", "calls": 0, "cache_hits": 0, "spent_cny": 0,
                               "reason": "", "failures": [], **(payload["ai"].get("usage") or {})}
     for dim in payload.get("dimensions") or []:
         for result in dim.get("results") or []:

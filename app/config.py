@@ -63,6 +63,9 @@ class LLMConfig:
     # 独立模型批次的并发数。默认 2，在不改变输入、参数和校验的前提下缩短等待时间。
     parallel_calls: int = 2
     temperature: float = 0.1
+    # thinking/reasoning 相关配置（参与缓存键，保证不同推理配置不互相复用结果）
+    reasoning: str = ""
+    reasoning_effort: str = ""
     # 单次扫描预算（人民币）。未配置单价时按 0 计，仅累计 token 量。
     budget_cny: float = 3.0
     price_in_cny_per_1m: float = 0.0
@@ -138,6 +141,8 @@ def load_settings() -> Settings:
         max_output_tokens=_i("LLM_MAX_OUTPUT_TOKENS", 2000),
         parallel_calls=max(1, _i("LLM_PARALLEL_CALLS", 2)),
         temperature=_f("LLM_TEMPERATURE", 0.1),
+        reasoning=os.environ.get("LLM_REASONING", "").strip(),
+        reasoning_effort=os.environ.get("LLM_REASONING_EFFORT", "").strip(),
         budget_cny=_f("LLM_BUDGET_CNY", 3.0),
         price_in_cny_per_1m=_f("LLM_PRICE_IN_CNY_PER_1M", 0.0),
         price_out_cny_per_1m=_f("LLM_PRICE_OUT_CNY_PER_1M", 0.0),

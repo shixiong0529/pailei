@@ -359,7 +359,7 @@ section{scroll-margin-top:16px}
 <section id="sec-04">
   <h2><span class="idx">04</span>数据来源与算法</h2>
   <p class="hint">
-    AI 解读：{% if ai.usage.available %}已启用（{{ ai.usage.model or '已配置模型' }}，{{ ai.usage.calls or 0 }} 次调用，{{ '%.4f'|format(ai.usage.spent_cny or 0) }} 元）{% else %}未启用——{{ ai.usage.reason or '未配置密钥' }}，结论解释为规则模板文案{% endif %}。
+    AI 解读：{% if ai.usage.available %}已启用（{{ ai.usage.model or '已配置模型' }}，{{ ai.usage.calls or 0 }} 次模型调用{% if ai.usage.cache_hits %}，{{ ai.usage.cache_hits }} 次缓存复用{% endif %}，{{ '%.4f'|format(ai.usage.spent_cny or 0) }} 元）{% else %}未启用——{{ ai.usage.reason or '未配置密钥' }}，结论解释为规则模板文案{% endif %}。
     计算口径：期间损益与现金流按各自财年累计，同比只与上一年同期、同币种同口径比较；
     货币资金扣除受限资金后才计入可用现金，单列的现金及等价物不重复扣除受限现金；缺失口径不估算。
   </p>
