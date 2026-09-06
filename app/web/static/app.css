@@ -53,6 +53,15 @@ a:hover{text-decoration:underline}
   letter-spacing:.04em;box-shadow:0 6px 20px rgba(37,99,235,.28)}
 .btn.lg:hover{box-shadow:0 8px 24px rgba(37,99,235,.36)}
 
+/* 卖点句：蓝底白字大字号，与 banner 形成蓝顶蓝底呼应 */
+.hero-tagline{text-align:center;padding:36px 28px;margin:24px 0;border-radius:16px;
+  background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);color:#fff;
+  font-size:24px;font-weight:800;line-height:1.55;letter-spacing:.02em;
+  box-shadow:0 8px 24px rgba(37,99,235,.22)}
+@media (max-width:640px){
+  .hero-tagline{font-size:20px;padding:28px 22px;line-height:1.5}
+}
+
 .card{background:var(--card);border-radius:14px;padding:20px 22px;margin-bottom:16px;
   box-shadow:0 1px 2px rgba(15,23,42,.05)}
 .card h2{font-size:16px;margin:0 0 12px}
