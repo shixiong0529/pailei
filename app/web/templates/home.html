@@ -23,11 +23,11 @@
     <button class="chip" data-q="00300">美的集团 00300（港股）</button>
     <button class="chip" data-q="000001">平安银行 000001</button>
   </div>
-  <div style="margin-top:22px">
-    <button class="btn" id="scan">开始扫描</button>
-    <label style="margin-left:14px;font-size:13px;color:var(--muted)">
+  <div style="margin-top:26px;text-align:center">
+    <button class="btn lg" id="scan">开始扫描</button>
+    <div style="margin-top:14px;font-size:13.5px;color:var(--muted)">
       <input type="checkbox" id="force"> 强制刷新（忽略 60 分钟内的缓存结果）
-    </label>
+    </div>
   </div>
   <div id="msg" style="margin-top:14px;color:var(--risk);font-size:13.5px"></div>
 </div>
@@ -50,7 +50,7 @@
         <td class="mono">{{ (t.created_at or '')[:16] }}</td>
         <td>
           {% if task_done(t.status) %}
-            <a href="/report/{{ t.task_id }}">查看报告</a>
+            <a href="/report/{{ t.task_id }}" target="_blank" rel="noopener">查看报告</a>
           {% else %}
             <a href="/scan/{{ t.task_id }}">查看进度</a>
           {% endif %}
