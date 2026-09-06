@@ -46,6 +46,13 @@ section h3 span{color:var(--muted);font-weight:400;font-size:12.5px}
 .badge.normal{background:#dcfce7;color:#166534}
 .badge.insufficient{background:#e5e7eb;color:#4b5563}
 .badge.na{background:#f1f5f9;color:#64748b}
+/* 评级徽章配色：A 绿 / B 蓝 / C 黄 / D 橙 / E 红 */
+.badge.grade{padding:2px 12px;font-size:14px;font-weight:700;letter-spacing:.04em}
+.badge.grade-a{background:#16a34a;color:#fff}
+.badge.grade-b{background:#2563eb;color:#fff}
+.badge.grade-c{background:#d97706;color:#fff}
+.badge.grade-d{background:#ea580c;color:#fff}
+.badge.grade-e{background:#dc2626;color:#fff}
 .sev-high{color:#991b1b}.sev-mid{color:#92400e}.sev-low{color:#1d4ed8}.sev-unknown{color:#6b7280}
 table{width:100%;border-collapse:collapse;font-size:13.5px}
 th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -230,7 +237,7 @@ section{scroll-margin-top:16px}
   </div>
 
   <div class="score-box density">
-    <div class="score-main"><span class="score-num">{{ risk_score.score }}</span></div>
+    <div class="score-main"><span class="score-num">{{ risk_score.score }}</span>{% if risk_score.grade and risk_score.grade != '—' %}<span class="badge grade grade-{{ risk_score.grade | lower }}">{{ risk_score.grade }}</span>{% endif %}</div>
     <div class="score-side">
       <div class="score-label">风险信号密度（次要指标）</div>
       <div class="score-comp">
