@@ -1,8 +1,17 @@
 # 交接报告：A 股 / 港股基本面排雷 Agent
 
+> **2026-09-06 V1.2 可信度改造更新**：报告版本升至 V1.2，规则版本保持 1.1（52 项规则与阈值不变）。
+> V1.2 新增模型结果缓存与可复现、AI 候选事件分层、事件生命周期与按需历史追溯、任务状态与覆盖等级分离、
+> 资料选择与目标章节解析、行业规则能力口径、运行诊断与存储清理。原有 147 项测试保持通过，V1.2 与复验修复测试 114 项，共 **261 项**。完整变更、迁移、样本与回滚见
+> [V1.2 实施报告](docs/V1.2_IMPLEMENTATION_REPORT.md)。旧报告须重新扫描才会使用 V1.2 口径。
+
 > **2026-09-06 修复更新**：诊断 A01—A31 的程序修复已实施，规则版本 1.1。原有 58 项 + 验收回归 53 项 + 独立边界测试 36 项通过，共 147 项。完整变更、测试证据及限制见 [修复与回归记录](docs/FIX_REPORT_2026-09-06.md)。下文原有 2026-09-05 结果是历史记录；以本更新和修复记录为准。旧报告须重新扫描才会使用新规则。
 
-> **2026-09-06 性能更新**：模型分批保持原输入与校验，最多 2 路并行；真实 `00700.HK` Web 报告由 120.030 秒降至 61.383 秒。预算并发安全、质量对照和回退配置见 [耗时实测与优化记录](docs/PERFORMANCE_OPTIMIZATION_2026-09-06.md)。
+> **2026-09-06 最终复验更新**：修复生命周期自行解除、例行审计公告风险化、持续经营结论矛盾、事件来源展示与资料数量口径；成功的长 PDF 页段解析现可复用缓存。按用户最终选择保留醒目的 A—E 风险等级徽章。261 项测试全过，三份 V1.2 真实报告复验通过。
+
+> **2026-09-06 性能更新**：模型分批保持原输入与校验，最多 2 路并行；最终真实扫描为腾讯 30.2s、茅台 69.5s、万科 69.4s，详见 [耗时实测与优化记录](docs/PERFORMANCE_OPTIMIZATION_2026-09-06.md)。
+
+> **2026-09-06 存储清理**：已删除可重新下载的公告 PDF、PDF 解析缓存、两套验收 `runtime/` 临时副本和 62 个旧报告文件，保留业务数据库、模型缓存与三份最终报告；项目由约 601 MB 降至 43 MB。后续清理与恢复说明见 README「释放本地磁盘空间」。
 
 > 交接目的：供后续验收、代码审核和维护使用。本文自包含项目全貌、关键设计决策、
 > 可执行的验收步骤与建议的审核重点。初版撰写于 2026-09-05，当前状态更新于 2026-09-06。
@@ -27,11 +36,11 @@
 FastAPI (app/main.py)
   ├── 线程池(5) 后台任务 ──→ ScanPipeline (app/engine/pipeline.py)
   │        身份识别 → 检索规划 → 资料获取 → 标准化 → 规则检查 → 专项阅读 → 核验 → 报告
-  ├── SQLite (app/core/db.py, 10 张表：任务/事实/文档/证据/规则结果/事件/报告版本/日志/健康/LLM用量)
+  ├── SQLite (app/core/db.py, 12 张表：任务/事实/文档/证据/规则结果/事件/报告版本/日志/健康/LLM用量/阶段耗时/运行时统计)
   ├── 数据适配层 (app/data/)：eastmoney 财报、cninfo A股公告、hkexnews 港股公告、
   │        identity 身份识别（含 A/H 关联）、pdftext PDF 解析与证据定位
   ├── 规则引擎 (app/engine/rules/)：通用 36 项 + 行业包 16 项（银行/保险/券商/地产各 4 项）
-  ├── LLM 适配层 (app/llm/adapter.py)：OpenAI 兼容协议，当前 GLM-5.3-Flash
+  ├── LLM 适配层 (app/llm/adapter.py)：OpenAI 兼容协议，当前 GLM-5.3-Flash；含结果缓存（V1.2）
   └── 报告渲染 (app/report/render.py + templates/report.html.j2)：Jinja2 StrictUndefined
 ```
 
@@ -77,7 +86,7 @@ SQLite `reports` 表存 payload 供在线页使用；在线页每请求用同一
 # ① 原有单元测试（离线）——预期：58 项全部 OK
 python tests/run_tests.py
 
-# ② 验收回归与独立边界测试（离线）——预期：89 项全部 OK
+# ② 验收回归与边界测试（离线）——预期：203 项全部 OK
 python -m unittest discover -s tests -p 'test_*.py' -v
 
 # ③ 启动服务——预期：Uvicorn running on http://127.0.0.1:8770
@@ -125,10 +134,10 @@ if [ -n "$PID" ]; then kill "$PID"; fi
 
 - "数据不足"检查项不进入主结论矩阵，在风险总览的折叠清单中完整列出
 - 历史报告 JSON 中部分 `security.name` 仍为代码（仅 603986 已补正；新生成的不受影响）
-- 20 家固定验证集回归未建立（当前有 3 个规则 1.1 真实复验样本，另有旧版历史样本）
-- 历史风险跨年追溯未实现（12 个月公告窗口）
+- 历史风险跨年追溯已实现（V1.2 阶段 3，按需触发，受查询/公告/下载/耗时上限约束）
 - 数据源为公开网页接口，商用授权未确认；巨潮对高频抓取敏感（已限流 2 rps）
 - `data/publish/`（外部分享链接）为手工发布流程，未自动化
+- 本地公告 PDF 已在最终验收后清理；首次重新扫描会按需下载，不影响现有 Web 报告
 
 ## 8. 文件地图
 
@@ -138,20 +147,24 @@ if [ -n "$PID" ]; then kill "$PID"; fi
 | `app/config.py` | 全部配置（环境变量 / .env，`.env.example` 是唯一权威清单） |
 | `app/core/` | 数据对象（models）、SQLite（db）、安全 HTTP 客户端、简繁文本工具 |
 | `app/data/` | eastmoney / cninfo / hkexnews / identity / pdftext 五个适配器 |
-| `app/engine/` | normalize（标准化）、metrics（指标）、rules（规则引擎）、pipeline（编排） |
-| `app/llm/adapter.py` | OpenAI 兼容适配 + 分批调用 + 预算控制 |
+| `app/engine/` | normalize（标准化）、metrics（指标）、rules（规则引擎）、gaps（缺口分类）、selection（资料选择）、pipeline（编排） |
+| `app/llm/adapter.py` | OpenAI 兼容适配 + 分批调用 + 预算控制 + 结果缓存 |
 | `app/report/` | render.py（上下文构建 + 评分）、charts.py（SVG）、templates/（唯一模板） |
+| `app/validation/` | V1.2 固定验收集（checklist.json）与报告语义差异工具 |
+| `app/core/storage.py` | V1.2 内容寻址存储：SHA256 硬链接去重 |
 | `app/web/` | 首页/进度页/历史/管理的页面模板与静态资源 |
 | `tests/run_tests.py` | 58 项原有确定性测试（离线） |
-| `tests/test_acceptance.py` | 53 项验收回归测试（离线） |
+| `tests/test_acceptance.py` | 55 项验收回归测试（离线） |
 | `tests/test_hardening.py` | 36 项独立边界与集成测试（离线） |
+| `tests/test_{validation,llm_cache,events,lifecycle,status,selection,capability,diagnostics}.py` | V1.2 阶段 0—7 与复验测试，共 112 项 |
 | `docs/RULES.md` | 52 项规则完整参考（改规则必须同步更新） |
+| `docs/V1.2_IMPLEMENTATION_REPORT.md` | V1.2 实施报告：最终行为、迁移、测试、样本、回滚 |
 | `DEVELOPMENT_STATUS.md` | 开发状态：已完成、误报修复、未实现清单、续接指引 |
-| `scripts/` | run_scan（CLI）、phase0_validate（数据源验证）、inspect_report（报告检查） |
+| `scripts/` | run_scan（CLI）、phase0_validate（数据源验证）、inspect_report（报告检查）、cleanup（缓存清理） |
 
 ## 9. 验收判定建议
 
-- **通过**：147 项测试全过 + ⑤ 或 ⑥ 至少一条链路跑通 + 报告验收要点全部满足
+- **通过**：261 项测试全过 + ⑤ 或 ⑥ 至少一条链路跑通 + 报告验收要点全部满足
   + 第 6 节审核重点无 P0 级发现
 - **有条件通过**：发现 P1（如某个边界条件错误但主流程正确）→ 列清单修复后复验
 - **不通过**：安全类问题（XSS/SSRF 绕过）、伪造证据/结论、模型参与数值计算

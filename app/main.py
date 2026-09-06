@@ -21,7 +21,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from app.config import settings
 from app.core import db
 from app.core.http_client import HttpClient
-from app.core.models import STAGE_DETAIL, STAGE_ORDER, Stage, TaskStatus
+from app.core.models import STAGE_DETAIL, STAGE_ORDER, Stage, TaskStatus, display_status, task_is_done
 from app.data.eastmoney import EastmoneyClient
 from app.data.identity import IdentityResolver
 from app.engine.pipeline import ScanPipeline
@@ -50,6 +50,9 @@ env = Environment(
     trim_blocks=True,
     lstrip_blocks=True,
 )
+# V1.2：任务状态与覆盖程度分离后的展示辅助（兼容旧「完成/部分完成/失败」状态）。
+env.globals["status_label"] = display_status
+env.globals["task_done"] = task_is_done
 
 MAX_WORKERS = 5
 executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
@@ -84,12 +87,29 @@ def history():
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin():
+    runtime = db.stats()
+    llm = db.llm_stats()
+    llm_hits = runtime.get("llm_cache_hits", 0)
+    llm_misses = runtime.get("llm_cache_misses", 0)
+    llm_total = llm_hits + llm_misses
+    pdf_hits = runtime.get("pdf_cache_hits", 0)
+    pdf_misses = runtime.get("pdf_cache_misses", 0)
+    pdf_total = pdf_hits + pdf_misses
     return render(
         "admin.html",
         app_name=settings.app_name,
         sources=db.source_stats(),
-        llm=db.llm_stats(),
+        llm=llm,
         tasks=db.task_stats(),
+        stages=db.stage_stats(),
+        cache={
+            "llm_hits": llm_hits,
+            "llm_misses": llm_misses,
+            "llm_rate": round(llm_hits / llm_total * 100, 1) if llm_total else None,
+            "pdf_hits": pdf_hits,
+            "pdf_misses": pdf_misses,
+            "pdf_rate": round(pdf_hits / pdf_total * 100, 1) if pdf_total else None,
+        },
         settings_view={
             "市场": "A 股（沪/深/北） + 港股",
             "财务数据源": "东方财富数据中心",
@@ -231,7 +251,9 @@ def task_status(task_id: str):
         {
             "ok": True,
             "task_id": task_id,
-            "status": task.get("status"),
+            "status": display_status(task.get("status")),
+            "coverage_level": task.get("coverage_level") or "",
+            "done": task_is_done(task.get("status")),
             "stage": task.get("stage"),
             "stage_index": task.get("stage_index") or 0,
             "query": task.get("query"),

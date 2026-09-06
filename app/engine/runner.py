@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from app.core.models import (
+    Capability,
     Evidence,
     EvidenceStrength,
     RuleStatus,
@@ -58,6 +59,7 @@ class Coverage:
     evaluated: int = 0
     insufficient: int = 0
     not_applicable: int = 0
+    unsupported: int = 0   # 数据源暂不支持，不计入已执行的有效检查
     by_dimension: dict[str, dict[str, int]] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -66,6 +68,7 @@ class Coverage:
             "evaluated": self.evaluated,
             "insufficient": self.insufficient,
             "not_applicable": self.not_applicable,
+            "unsupported": self.unsupported,
             "completeness": (
                 round(self.evaluated / self.applicable, 4) if self.applicable else 0.0
             ),
@@ -191,20 +194,27 @@ def refresh_coverage(output: EngineOutput) -> None:
     for outcome in output.outcomes:
         dim = outcome.rule.dimension.value
         bucket = coverage.by_dimension.setdefault(
-            dim, {"总数": 0, "已判断": 0, "数据不足": 0, "不适用": 0}
+            dim, {"总数": 0, "已判断": 0, "数据不足": 0, "不适用": 0, "数据源暂不支持": 0}
         )
         bucket["总数"] += 1
+        # 不适用优先于能力状态：银行规则对普通行业只是「不适用」，而非「数据源暂不支持」。
         if outcome.status is RuleStatus.NOT_APPLICABLE:
             coverage.not_applicable += 1
             bucket["不适用"] += 1
+            continue
+        # 数据源暂不支持：该检查缺少可靠数据字段，不计入「本次已执行的有效检查」，
+        # 也不进入适用/已判断/数据不足的覆盖率分母，但仍单独展示，不冒充已完成。
+        if outcome.capability == Capability.UNSUPPORTED_SOURCE.value:
+            coverage.unsupported += 1
+            bucket["数据源暂不支持"] += 1
+            continue
+        coverage.applicable += 1
+        if outcome.status is RuleStatus.INSUFFICIENT:
+            coverage.insufficient += 1
+            bucket["数据不足"] += 1
         else:
-            coverage.applicable += 1
-            if outcome.status is RuleStatus.INSUFFICIENT:
-                coverage.insufficient += 1
-                bucket["数据不足"] += 1
-            else:
-                coverage.evaluated += 1
-                bucket["已判断"] += 1
+            coverage.evaluated += 1
+            bucket["已判断"] += 1
     output.coverage = coverage
 
 

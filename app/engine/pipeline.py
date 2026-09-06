@@ -4,7 +4,7 @@
 6 专项阅读 → 7 核验 → 8 报告生成。
 
 每个阶段写入检查点（数据库），进程重启后可继续或安全重试；
-超时按当前进度生成带缺口的“部分完成”报告，不静默省略。
+超时按当前进度生成带缺口的报告（任务状态记为「超时」、覆盖等级单独表达），不静默省略。
 """
 
 from __future__ import annotations
@@ -20,8 +20,11 @@ from app.config import settings
 from app.core import db
 from app.core.http_client import FetchError, HttpClient, summarize_records
 from app.core.models import (
+    Capability,
     Dimension,
     DisclosureDoc,
+    Evidence,
+    EVENT_CATEGORIES,
     Market,
     PeriodType,
     RiskEvent,
@@ -37,9 +40,18 @@ from app.data.cninfo import CninfoClient
 from app.data.eastmoney import EastmoneyClient
 from app.data.hkexnews import HkexnewsClient
 from app.data.identity import IdentityResolver
-from app.data.pdftext import build_evidence, parse_pdf
+from app.data.pdftext import (
+    TARGET_CHAPTER_KEYWORDS,
+    build_evidence,
+    parse_pdf,
+    plan_target_parse,
+    target_chapters_found,
+)
 from app.engine.metrics import compute_metrics
 from app.engine.normalize import FactSet
+from app.engine import gaps
+from app.engine import lifecycle
+from app.engine.selection import select_documents
 from app.engine.runner import (
     EngineOutput,
     RuleContext,
@@ -74,6 +86,31 @@ TOPIC_KEYWORDS = {
     "减值": ["减值", "減值", "商誉", "商譽"],
 }
 
+# 会计师事务所标题在数据源中被统一归为“审计机构”，其中大量是例行续聘、履职评估和
+# 监督职责报告。只有明确包含变更、退出或审计重大风险信号的文件才进入风险事件时间线；
+# 例行聘任文件仍保留在 docs 中，可作为真正审计机构变更事件的后续状态依据。
+AUDITOR_RISK_HINTS = (
+    "变更", "改聘", "更换", "辞任", "辞聘", "解聘", "不再续聘", "终止聘任",
+    "變更", "更換", "辭任", "辭聘", "不再續聘", "終止聘任",
+    "保留意见", "否定意见", "无法表示意见", "無法表示意見",
+    "保留意見", "否定意見",
+    "持续经营重大不确定性", "持續經營重大不確定性",
+)
+
+
+def is_deterministic_risk_doc(doc: DisclosureDoc) -> bool:
+    """公告是否可由程序直接升级为正式风险事件。"""
+    risk_types = {
+        "监管处罚", "监管调查", "诉讼", "资产冻结", "监管问询",
+        "上市地位", "财务更正", "盈利警告", "审计机构", "股权质押",
+    }
+    if doc.doc_type not in risk_types:
+        return False
+    if doc.doc_type != "审计机构":
+        return True
+    title = doc.title or ""
+    return any(hint in title for hint in AUDITOR_RISK_HINTS)
+
 
 @dataclass
 class ScanResult:
@@ -97,10 +134,33 @@ class ScanPipeline:
         self.em = EastmoneyClient(self.http)
         self.llm = LLMAdapter(task_id=self.task_id)
         self.llm.deadline = self.deadline
+        # V1.2 阶段 7：记录八个流水线阶段的墙钟耗时与结果摘要。
+        self._current_stage: Stage | None = None
+        self._stage_started: float = 0.0
+        self._stage_summary: dict[str, str] = {}
 
     # ------------------------------------------------------------ 工具
 
+    def _record_stage(self) -> None:
+        """结束当前阶段，落库阶段耗时与结果摘要（由下一阶段进入时触发）。"""
+        if self._current_stage is None:
+            return
+        now = time.time()
+        elapsed_ms = int((now - self._stage_started) * 1000)
+        db.record_stage(
+            self.task_id,
+            self._current_stage.value,
+            STAGE_ORDER.index(self._current_stage),
+            self._stage_started,
+            now,
+            elapsed_ms,
+            self._stage_summary.get(self._current_stage.value, ""),
+        )
+
     def _checkpoint(self, stage: Stage) -> None:
+        self._record_stage()
+        self._current_stage = stage
+        self._stage_started = time.time()
         self.http.deadline = self.deadline
         self.llm.deadline = self.deadline
         db.update_task(
@@ -161,6 +221,7 @@ class ScanPipeline:
             )
 
         # ---------- 2. 检索规划 ----------
+        self._stage_summary[Stage.IDENTIFY.value] = f"{security.name}（{security.secucode}）"
         self._checkpoint(Stage.PLAN)
         end = date.today()
         start = end - timedelta(days=30 * settings.announcement_months)
@@ -176,6 +237,7 @@ class ScanPipeline:
         self.stage_notes["检索规划"] = f"公告区间 {start} ~ {end}，行业规则包 {industry_pack}"
 
         # ---------- 3. 资料获取 ----------
+        self._stage_summary[Stage.PLAN.value] = self.stage_notes.get("检索规划", "")
         self._checkpoint(Stage.COLLECT)
         docs, announcement_meta = [], {"source": "", "total": 0, "range": f"{start} ~ {end}"}
         if self._time_left() > 0:
@@ -191,6 +253,9 @@ class ScanPipeline:
         db.save_fetch_logs(self.task_id, self.http.records)
 
         # ---------- 4. 标准化 ----------
+        self._stage_summary[Stage.COLLECT.value] = (
+            f"公告 {len(docs)} 条，下载 {len([d for d in docs if d.local_path])} 份"
+        )
         self._checkpoint(Stage.NORMALIZE)
         raw_facts = []
         if self._time_left() > 0:
@@ -218,6 +283,7 @@ class ScanPipeline:
             self.gaps.append("未获取到任何财务报告期数据，全部财务类检查项将判定为数据不足")
 
         # ---------- 5. 规则检查 ----------
+        self._stage_summary[Stage.NORMALIZE.value] = f"财务事实 {len(raw_facts)} 条"
         self._checkpoint(Stage.RULE)
         metrics = compute_metrics(facts, market=security.market, industry=security.industry)
         for note in metrics.notes:
@@ -238,11 +304,23 @@ class ScanPipeline:
         output = run_rules(ctx, registry)
 
         # ---------- 6. 专项阅读 ----------
+        self._stage_summary[Stage.RULE.value] = f"规则 {len(output.outcomes)} 项"
         self._checkpoint(Stage.READ)
-        events = self._extract_events(docs, parsed_docs)
+        events, pending_clues = self._extract_events(docs, parsed_docs, evidence_store)
+        # V1.2 事件生命周期：把同一事项的多份披露串成生命周期，补充解除依据与关联公告。
+        events = lifecycle.enrich_events(events, docs)
+        trace = self._plan_trace_back(events, start)
+        if trace["triggered"] and self._time_left() > 0:
+            docs, _tb_gaps = self._trace_back_history(security, trace, docs)
+            self._append_evidence(security, docs, evidence_store, parsed_docs)
+            events = lifecycle.enrich_events(events, docs)
+        lifecycles = lifecycle.build_lifecycles(events)
         ai_interpret(output, ctx, self.llm)
 
         # ---------- 7. 核验 ----------
+        self._stage_summary[Stage.READ.value] = (
+            f"事件 {len(events)} 项，待核实线索 {len(pending_clues)} 条"
+        )
         self._checkpoint(Stage.VERIFY)
         ai_verify(output, ctx, self.llm)
         verified_count = self._reverify_evidence(evidence_store, parsed_docs)
@@ -257,13 +335,29 @@ class ScanPipeline:
         refresh_coverage(output)
         if self.llm.failures:
             self.gaps.extend(f"模型步骤未完整执行：{reason}" for reason in self.llm.failures)
-        if output.insufficient():
-            self.gaps.append(f"{len(output.insufficient())} 项检查缺少判断依据，详情见数据不足汇总")
+        insufficient_enabled = [
+            o for o in output.outcomes
+            if o.status is RuleStatus.INSUFFICIENT and o.capability == Capability.ENABLED.value
+        ]
+        unsupported = [
+            o for o in output.outcomes
+            if o.capability == Capability.UNSUPPORTED_SOURCE.value
+            and o.status is not RuleStatus.NOT_APPLICABLE
+        ]
+        if insufficient_enabled:
+            self.gaps.append(f"{len(insufficient_enabled)} 项检查缺少判断依据，详情见数据不足汇总")
+        if unsupported:
+            self.notes.append(
+                f"{len(unsupported)} 项行业检查因数据源暂不支持，未计入有效检查数量（"
+                f"{'、'.join(o.rule.rule_id for o in unsupported)}）"
+            )
 
         # ---------- 8. 报告生成 ----------
+        self._stage_summary[Stage.VERIFY.value] = f"证据复核通过 {verified_count} 条"
         self._checkpoint(Stage.REPORT)
         elapsed = time.time() - started
         timed_out = self._time_left() <= 0
+        coverage_level = gaps.coverage_level_of(self.gaps)
         payload = self._build_payload(
             security=security,
             company=company.to_dict() if company else None,
@@ -274,30 +368,39 @@ class ScanPipeline:
             evidence_store=evidence_store,
             output=output,
             events=events,
+            pending_clues=pending_clues,
+            lifecycles=lifecycles,
+            trace_back=trace,
             plan=plan,
             industry_pack=industry_pack,
             started=started,
             elapsed=elapsed,
             timed_out=timed_out,
             verification_count=verified_count,
+            coverage_level=coverage_level,
             network=summarize_records(self.http.records),
         )
         html_path, json_path = render_report(payload)
         version = db.save_report(self.task_id, html_path, json_path, payload)
         db.save_rule_results(self.task_id, [o.to_result() for o in output.outcomes])
         db.save_risk_events(self.task_id, events)
+        db.save_documents(self.task_id, docs)
         db.save_evidences(self.task_id, evidence_store.items.values())
         db.save_fetch_logs(self.task_id, self.http.records)
 
-        status = TaskStatus.PARTIAL if (timed_out or self.gaps) else TaskStatus.SUCCEEDED
-        if not any(
-            o.status in (RuleStatus.RISK, RuleStatus.WATCH, RuleStatus.NORMAL)
-            for o in output.outcomes
-        ):
-            status = TaskStatus.PARTIAL
+        # 记录最后一个阶段（报告生成）的耗时与摘要，然后落库最终任务状态。
+        self._stage_summary[Stage.REPORT.value] = (
+            f"HTML {html_path}，JSON {json_path}"
+        )
+        self._record_stage()
+        self._current_stage = None
+
+        # 任务状态与覆盖程度分离：状态只表达「是否成功生成」，覆盖缺口另列覆盖等级。
+        status = TaskStatus.TIMEOUT if timed_out else TaskStatus.SUCCEEDED
         db.update_task(
             self.task_id,
             status=status.value,
+            coverage_level=coverage_level,
             stage=Stage.REPORT.value,
             stage_index=len(STAGE_ORDER),
             finished_at=now_iso(),
@@ -308,7 +411,7 @@ class ScanPipeline:
         return ScanResult(
             self.task_id, status, payload,
             html_path=html_path, json_path=json_path,
-            message="带有缺口的完整报告" if status is TaskStatus.PARTIAL else "完成",
+            message="生成成功（存在数据覆盖缺口）" if (self.gaps or timed_out) else "生成成功",
         )
 
     # ------------------------------------------------------------ 阶段实现
@@ -324,9 +427,10 @@ class ScanPipeline:
                 out = hk.announcements(security.code, stock_id, start, end)
                 docs, meta["gaps"] = out["docs"], out["gaps"]
                 meta.update({"source": "hkexnews", "stock_id": stock_id,
-                             "total": out["total"], "range": out["range"]})
-                ordered = self._order_docs(docs)
-                for doc in ordered[: settings.max_pdf_downloads]:
+                             "total": out["total"], "fetched": len(docs), "range": out["range"]})
+                ordered, reasons = select_documents(docs, max_total=settings.max_pdf_downloads)
+                meta["selection"] = reasons
+                for doc in ordered:
                     if self._time_left() < 60:
                         meta["gaps"].append("接近任务时限，停止下载剩余原文")
                         break
@@ -341,18 +445,23 @@ class ScanPipeline:
                 out = cn.announcements(security.code, org[0], start, end, column=org[1])
                 docs, meta["gaps"] = out["docs"], out["gaps"]
                 meta.update({"source": "cninfo", "org_id": org[0],
-                             "total": out["total"], "range": out["range"]})
-                ordered = self._order_docs(docs)
-                for doc in ordered[: settings.max_pdf_downloads]:
+                             "total": out["total"], "fetched": len(docs), "range": out["range"]})
+                ordered, reasons = select_documents(docs, max_total=settings.max_pdf_downloads)
+                meta["selection"] = reasons
+                for doc in ordered:
                     if self._time_left() < 60:
                         meta["gaps"].append("接近任务时限，停止下载剩余原文")
                         break
                     cn.download(doc)
         if len(docs) > settings.max_pdf_downloads:
-            meta["gaps"].append(f"{len(docs)} 份公告中仅下载最多 {settings.max_pdf_downloads} 份原文，其余仅检查标题")
+            meta["gaps"].append(
+                f"基础扫描 {len(docs)} 份公告中仅下载最多 {settings.max_pdf_downloads} 份原文，"
+                "其余仅检查标题；按需历史追溯有独立下载上限"
+            )
         for doc in docs:
             if doc.parse_error:
                 meta["gaps"].append(f"《{doc.title}》原文获取失败：{doc.parse_error}")
+        self.notes.extend(meta.get("selection") or [])
         self.gaps.extend(meta["gaps"])
         return docs, meta
 
@@ -372,53 +481,98 @@ class ScanPipeline:
             security.org_name or security.name, security.code, security.market
         )
         for doc in docs:
-            if not doc.local_path:
-                continue
-            if not settings.enable_pdf_parse:
-                continue
-            if self._time_left() <= 0:
-                self.gaps.append("任务期限已到，停止剩余 PDF 解析")
-                break
-            parsed = parse_pdf(doc.local_path, timeout=min(60, self._time_left()))
-            if parsed.truncated:
-                self.gaps.append(f"《{doc.title}》仅解析 {len(parsed.pages)}/{parsed.page_count} 页，剩余正文未覆盖")
-            parsed.doc_id = doc.doc_id
-            parsed_docs[doc.doc_id] = parsed
-            doc.parsed = not parsed.error
-            doc.page_count = parsed.page_count
-            doc.text_excerpt = parsed.pages[0][1][:200] if parsed.pages else ""
-            if parsed.error:
-                doc.parse_error = parsed.error
-                self.gaps.append(f"《{doc.title}》解析失败：{parsed.error}")
-                continue
-            ev = build_evidence(doc, parsed, base_keywords)
-            if ev:
-                store.add(ev, doc_type=doc.doc_type)
-            for topic, keywords in TOPIC_KEYWORDS.items():
-                topic_ev = build_evidence(doc, parsed, keywords)
-                if topic_ev:
-                    store.add(topic_ev, topics=[topic], doc_type=doc.doc_type)
+            self._add_doc_evidence(doc, base_keywords, store, parsed_docs)
         return store, parsed_docs
 
-    def _extract_events(
-        self, docs: list[DisclosureDoc], parsed: dict[str, Any]
-    ) -> list[RiskEvent]:
-        """事件提取：优先用模型；未启用模型时按公告类型做确定性提取。"""
-        events: list[RiskEvent] = []
-        risk_types = {
-            "监管处罚", "监管调查", "诉讼", "资产冻结", "监管问询",
-            "上市地位", "财务更正", "盈利警告", "审计机构", "股权质押",
-        }
+    def _append_evidence(
+        self, security, docs: list[DisclosureDoc], store: EvidenceStore, parsed_docs: dict[str, Any]
+    ) -> None:
+        """为按需追溯新增的公告补充证据（追加到既有 store，不重建）。"""
+        base_keywords = evidence_keywords(
+            security.org_name or security.name, security.code, security.market
+        )
         for doc in docs:
-            if doc.doc_type not in risk_types:
+            if doc.doc_id in parsed_docs:
                 continue
+            self._add_doc_evidence(doc, base_keywords, store, parsed_docs)
+
+    def _add_doc_evidence(
+        self, doc: DisclosureDoc, base_keywords: list[str], store: EvidenceStore, parsed_docs: dict[str, Any]
+    ) -> None:
+        if not doc.local_path:
+            return
+        if not settings.enable_pdf_parse:
+            return
+        if self._time_left() <= 0:
+            self.gaps.append("任务期限已到，停止剩余 PDF 解析")
+            return
+        parsed = parse_pdf(doc.local_path, timeout=min(60, self._time_left()), sha256=doc.sha256)
+        if parsed.truncated:
+            # 长文档：按上限截断时，区分「重点章节已覆盖」与「关键章节未定位」。
+            missing = set(TARGET_CHAPTER_KEYWORDS) - target_chapters_found(parsed)
+            extra_range = plan_target_parse(parsed)
+            if extra_range is not None and self._time_left() > 0:
+                start_page, extra_pages = extra_range
+                extra = parse_pdf(
+                    doc.local_path,
+                    max_pages=extra_pages,
+                    start_page=start_page,
+                    timeout=min(60, self._time_left()),
+                    sha256=doc.sha256,
+                )
+                if not extra.error:
+                    parsed.pages.extend(extra.pages)
+                    parsed.truncated = extra.truncated
+                    missing = set(TARGET_CHAPTER_KEYWORDS) - target_chapters_found(parsed)
+            if missing:
+                self.gaps.append(
+                    f"《{doc.title}》按上限截断，且关键章节未定位：{'、'.join(sorted(missing))}"
+                )
+            else:
+                self.gaps.append(
+                    f"《{doc.title}》仅解析 {len(parsed.pages)}/{parsed.page_count} 页，重点章节已覆盖"
+                )
+        parsed.doc_id = doc.doc_id
+        parsed_docs[doc.doc_id] = parsed
+        doc.parsed = not parsed.error
+        doc.page_count = parsed.page_count
+        doc.text_excerpt = parsed.pages[0][1][:200] if parsed.pages else ""
+        if parsed.error:
+            doc.parse_error = parsed.error
+            self.gaps.append(f"《{doc.title}》解析失败：{parsed.error}")
+            return
+        ev = build_evidence(doc, parsed, base_keywords)
+        if ev:
+            store.add(ev, doc_type=doc.doc_type)
+        for topic, keywords in TOPIC_KEYWORDS.items():
+            topic_ev = build_evidence(doc, parsed, keywords)
+            if topic_ev:
+                store.add(topic_ev, topics=[topic], doc_type=doc.doc_type)
+
+    def _extract_events(
+        self, docs: list[DisclosureDoc], parsed: dict[str, Any], store: Any = None
+    ) -> tuple[list[RiskEvent], list[dict[str, Any]]]:
+        """事件提取：确定性事件 + 模型候选事件。
+
+        模型只能产生候选事件，必须携带 doc_id 与 evidence_quote，并在对应 ParsedDoc
+        中定位完整引文、生成带文档/页码/指纹的 Evidence 且通过原文复核后，才能升级为
+        正式事件；未通过者进入待核实线索，不参与正式时间线与风险计数。
+        """
+        formal: list[RiskEvent] = []
+        clues: list[dict[str, Any]] = []
+        existing: set[str] = set()
+        # 1. 确定性事件：由程序按公告类型提取，直接作为正式事件。
+        for doc in docs:
+            if not is_deterministic_risk_doc(doc):
+                continue
+            existing.add(doc.doc_id)
             quote = ""
             location = ""
             pdoc = parsed.get(doc.doc_id)
             if pdoc and pdoc.pages:
                 location = f"第 {pdoc.pages[0][0]} 页"
                 quote = pdoc.pages[0][1][:300]
-            events.append(
+            formal.append(
                 RiskEvent(
                     event_id=f"evt:{doc.doc_id}",
                     title=doc.title,
@@ -431,45 +585,255 @@ class ScanPipeline:
                     resolved=None,
                 )
             )
-        # 模型补充：只追加模型从片段中提取到的事件，不得修改上述确定性事件
+        # 2. 模型候选事件：须证据复核通过才升级为正式事件。
         if self.llm.available and parsed and self._time_left() > 0:
             context = [
                 {
                     "doc_id": d.doc_id,
                     "title": d.title,
                     "date": d.publish_date,
+                    "doc_type": d.doc_type,
+                    "source": d.source,
+                    "url": d.url,
                     "excerpt": (parsed[d.doc_id].pages[0][1][:600] if d.doc_id in parsed and parsed[d.doc_id].pages else ""),
                 }
                 for d in docs[:20]
             ]
             result = self.llm.extract_events(context)
             if result.ok:
-                existing = {e.source_doc_id for e in events}
                 allowed = {item["doc_id"]: item for item in context}
                 for item in result.data or []:
                     if not isinstance(item, dict):
                         continue
                     doc_id = str(item.get("doc_id") or "")
                     if not doc_id or doc_id not in allowed:
-                        self.gaps.append("模型返回了不在本批输入中的事件来源，已拒收")
+                        clues.append(
+                            self._clue(item, "", "事件引用了不在本批输入中的公告 ID，已拒收")
+                        )
                         continue
                     if doc_id in existing:
                         continue
-                    existing.add(doc_id)
-                    events.append(
-                        RiskEvent(
-                            event_id=f"evt:ai:{doc_id}",
-                            title=str(item.get("title") or "")[:200],
-                            occurred_date=allowed[doc_id]["date"],
-                            category=str(item.get("category") or "经营"),
-                            summary=str(item.get("summary") or "")[:500],
-                            source_doc_id=doc_id,
-                            resolved=item.get("resolved") if isinstance(item.get("resolved"), bool) else None,
-                            resolution_note=str(item.get("resolution_note") or "")[:300],
-                        )
-                    )
-        events.sort(key=lambda e: e.occurred_date, reverse=True)
-        return events
+                    event, clue = self._bind_candidate_event(item, allowed, parsed, store)
+                    if event is not None:
+                        formal.append(event)
+                        existing.add(doc_id)
+                    elif clue is not None:
+                        clues.append(clue)
+        formal.sort(key=lambda e: e.occurred_date, reverse=True)
+        return formal, clues
+
+    @staticmethod
+    def _clue(item: dict[str, Any], doc_id: str, reason: str) -> dict[str, Any]:
+        return {
+            "doc_id": doc_id or str(item.get("doc_id") or ""),
+            "title": str(item.get("title") or "")[:200],
+            "category": str(item.get("category") or ""),
+            "summary": str(item.get("summary") or "")[:500],
+            "evidence_quote": str(item.get("evidence_quote") or "")[:500],
+            "occurred_date": "",
+            "reason": reason,
+        }
+
+    def _bind_candidate_event(
+        self,
+        item: dict[str, Any],
+        allowed: dict[str, dict[str, Any]],
+        parsed: dict[str, Any],
+        store: Any,
+    ) -> tuple[RiskEvent | None, dict[str, Any] | None]:
+        """校验模型候选事件并绑定原文证据，返回 (正式事件, 待核实线索)。"""
+        from app.data.pdftext import find_quote_page, verify_evidence
+
+        doc_id = str(item.get("doc_id") or "")
+        title = str(item.get("title") or "").strip()[:200]
+        category = str(item.get("category") or "").strip()
+        summary = str(item.get("summary") or "").strip()[:500]
+        evidence_quote = str(item.get("evidence_quote") or "").strip()
+        resolved = item.get("resolved")
+        if not isinstance(resolved, bool) and resolved is not None:
+            resolved = None
+        resolution_note = str(item.get("resolution_note") or "").strip()[:300]
+        occurred_date = str(allowed[doc_id].get("date") or "")
+
+        def reject(reason: str) -> tuple[None, dict[str, Any]]:
+            return None, self._clue(
+                {
+                    "doc_id": doc_id, "title": title, "category": category,
+                    "summary": summary, "evidence_quote": evidence_quote,
+                },
+                doc_id,
+                reason,
+            )
+
+        if category not in EVENT_CATEGORIES:
+            return reject(f"事件类型「{category or '空'}」不在固定枚举中，已拒收")
+        if not evidence_quote:
+            return reject("模型未提供可引用的原文片段（evidence_quote 为空）")
+        if len(evidence_quote) > 500:
+            return reject("原文片段超过 500 字上限")
+        if not occurred_date:
+            return reject("程序未掌握该公告的日期，无法确定事件发生时间")
+
+        pdoc = parsed.get(doc_id)
+        if not pdoc or pdoc.error:
+            return reject("对应公告未完成正文解析，无法复核引文")
+        page = find_quote_page(pdoc, evidence_quote)
+        if page is None:
+            return reject("原文中未定位到完整引文（虚构引文或同前缀但尾部不符）")
+        ev = Evidence(
+            evidence_id=f"{doc_id}:p{page}:{Evidence.fingerprint_of(evidence_quote[:900])}",
+            doc_id=doc_id,
+            title=str(allowed[doc_id].get("title") or "")[:200],
+            quote=evidence_quote[:900],
+            location=f"第 {page} 页",
+            url=str(allowed[doc_id].get("url") or ""),
+            source=str(allowed[doc_id].get("source") or ""),
+            publish_date=occurred_date,
+            fingerprint=Evidence.fingerprint_of(evidence_quote[:900]),
+        )
+        verify_evidence(ev, pdoc)
+        if not ev.verified:
+            return reject("原文复核未通过（引文未出现在所标页码或指纹不一致）")
+        if store is not None:
+            store.add(ev, topics=["事件"], doc_type=str(allowed[doc_id].get("doc_type") or ""))
+
+        event = RiskEvent(
+            event_id=f"evt:ai:{doc_id}:{ev.fingerprint}",
+            title=title or str(allowed[doc_id].get("title") or "")[:200],
+            occurred_date=occurred_date,
+            category=category,
+            summary=summary,
+            source_doc_id=doc_id,
+            resolved=resolved,
+            resolution_note=resolution_note,
+            evidence_ids=[ev.evidence_id],
+        )
+        return event, None
+
+    def _plan_trace_back(self, events: list[RiskEvent], current_start: date) -> dict[str, Any]:
+        """为未解除的重要事件规划按需历史追溯范围（确定性，不发起网络）。"""
+        limits = lifecycle.TraceBackLimits(
+            max_queries=settings.trace_back_max_queries,
+            max_announcements=settings.trace_back_max_announcements,
+            max_downloads=settings.trace_back_max_downloads,
+            max_seconds=settings.trace_back_max_seconds,
+        )
+        triggered = lifecycle.should_trace_back(events)
+        plan = lifecycle.trace_back_plan(
+            events, end=current_start, max_years=settings.trace_back_max_years, limits=limits
+        )
+        return {
+            "triggered": triggered,
+            "categories": plan.categories,
+            "range": {"start": plan.start, "end": plan.end},
+            "limits": {
+                "max_queries": limits.max_queries,
+                "max_announcements": limits.max_announcements,
+                "max_downloads": limits.max_downloads,
+                "max_seconds": limits.max_seconds,
+            },
+            "result": "待执行" if triggered else "无需追溯",
+        }
+
+    def _trace_back_history(
+        self, security, trace: dict[str, Any], docs: list[DisclosureDoc]
+    ) -> tuple[list[DisclosureDoc], list[str]]:
+        """按需向前追溯：在正常扫描窗口之前，按事件类别定向补齐历史公告。
+
+        仅当 trace["triggered"] 为真、网络启用且时间充足时执行；受查询/公告/下载/耗时上限约束，
+        达到上限记录缺口，不静默省略。
+        """
+        if not trace.get("triggered") or not settings.enable_network:
+            return docs, []
+        categories = set(trace.get("categories") or [])
+        if not categories:
+            return docs, []
+        limits = trace.get("limits") or {}
+        rng = trace.get("range") or {}
+        try:
+            start = date.fromisoformat(rng.get("start", ""))
+            end = date.fromisoformat(rng.get("end", ""))
+        except ValueError:
+            self.gaps.append("历史追溯日期区间无效，已跳过")
+            return docs, []
+        if start >= end:
+            return docs, []
+
+        max_ann = int(limits.get("max_announcements", 30))
+        max_dl = int(limits.get("max_downloads", 5))
+        max_seconds = float(limits.get("max_seconds", 60.0))
+        deadline = min(self.deadline, time.time() + max_seconds)
+
+        existing = {d.doc_id for d in docs}
+        extra: list[DisclosureDoc] = []
+        gaps: list[str] = []
+        fetched = 0
+        try:
+            if security.market is Market.HK:
+                with HkexnewsClient(self.http) as hk:
+                    stock_id = hk.resolve_stock_id(security.code)
+                    if not stock_id:
+                        self.gaps.append("历史追溯：无法定位港股 stock_id，已跳过")
+                        return docs, []
+                    out = hk.announcements(security.code, stock_id, start, end, max_items=max_ann)
+                    fetched = out.get("fetched", 0)
+                    extra = [d for d in out.get("docs", []) if d.doc_type in categories or self._trace_match(d.title, categories)]
+                    ordered = self._order_docs(extra)
+                    for doc in ordered:
+                        if self._time_left() < 60 or time.time() >= deadline:
+                            gaps.append("历史追溯达到耗时上限，停止下载剩余原文")
+                            break
+                        if sum(1 for d in extra if d.local_path) >= max_dl:
+                            gaps.append(f"历史追溯达到下载上限 {max_dl} 份")
+                            break
+                        hk.download(doc)
+            else:
+                with CninfoClient(self.http) as cn:
+                    org = cn.resolve_org(security.code)
+                    if not org:
+                        self.gaps.append("历史追溯：无法定位 A 股主体标识，已跳过")
+                        return docs, []
+                    out = cn.announcements(security.code, org[0], start, end, max_items=max_ann, column=org[1])
+                    fetched = out.get("fetched", 0)
+                    extra = [d for d in out.get("docs", []) if d.doc_type in categories or self._trace_match(d.title, categories)]
+                    ordered = self._order_docs(extra)
+                    for doc in ordered:
+                        if self._time_left() < 60 or time.time() >= deadline:
+                            gaps.append("历史追溯达到耗时上限，停止下载剩余原文")
+                            break
+                        if sum(1 for d in extra if d.local_path) >= max_dl:
+                            gaps.append(f"历史追溯达到下载上限 {max_dl} 份")
+                            break
+                        cn.download(doc)
+        except FetchError as exc:
+            gaps.append(f"历史追溯未完成：{exc}")
+
+        # 去重：只保留正常扫描窗口之外的新公告。
+        new_docs = [d for d in extra if d.doc_id and d.doc_id not in existing]
+        for d in new_docs:
+            if d.parse_error:
+                gaps.append(f"历史追溯《{d.title}》原文获取失败：{d.parse_error}")
+        if fetched and not new_docs:
+            gaps.append(f"历史追溯接口返回 {fetched} 条，但无新增公告（可能已覆盖或类别不匹配）")
+        if new_docs:
+            self.notes.append(f"已按需向前追溯 {len(new_docs)} 份历史公告（类别：{'、'.join(sorted(categories))}）")
+        self.gaps.extend(gaps)
+        return docs + new_docs, gaps
+
+    @staticmethod
+    def _trace_match(title: str, categories: set[str]) -> bool:
+        """按标题关键词判断公告是否属于待追溯类别（客户端过滤，接口无类别参数）。"""
+        keywords = {
+            "监管处罚": ("处罚", "處罰", "立案", "行政处罚"),
+            "监管调查": ("调查", "調查", "立案"),
+            "监管问询": ("问询", "問詢", "关注函", "监管函"),
+            "诉讼": ("诉讼", "訴訟", "仲裁"),
+            "资产冻结": ("冻结", "凍結"),
+            "股权质押": ("质押", "質押"),
+            "上市地位": ("退市", "停牌", "复牌", "复牌", "除牌"),
+        }
+        t = title or ""
+        return any(any(k in t for k in keywords.get(c, ())) for c in categories)
 
     def _reverify_evidence(self, store: EvidenceStore, parsed: dict[str, Any]) -> int:
         """对每条证据做原文复核，未通过的标记为 unverified，报告必须可见。"""
@@ -498,6 +862,10 @@ class ScanPipeline:
         docs: list[DisclosureDoc] = kw["docs"]
         evidence_store: EvidenceStore = kw["evidence_store"]
         events = kw["events"]
+        pending_clues = kw.get("pending_clues", [])
+        lifecycles = kw.get("lifecycles", [])
+        trace_back = kw.get("trace_back")
+        coverage_level = kw.get("coverage_level") or gaps.coverage_level_of(self.gaps)
 
         highest = Severity.UNKNOWN
         for o in output.outcomes:
@@ -525,6 +893,7 @@ class ScanPipeline:
                     "still_effective": o.still_effective,
                     "ai_interpreted": o.ai_interpreted,
                     "industry_pack": o.industry_pack,
+                    "capability": o.capability,
                 }
             )
 
@@ -532,7 +901,7 @@ class ScanPipeline:
         trends = self._build_trends(facts)
 
         payload: dict[str, Any] = {
-            "report_version": "1.1",
+            "report_version": "1.2",
             "rule_version": RULE_VERSION,
             "task_id": self.task_id,
             "generated_at": now_iso(),
@@ -541,6 +910,7 @@ class ScanPipeline:
                 "elapsed_seconds": round(kw["elapsed"], 1),
                 "timed_out": kw["timed_out"],
                 "status": "",
+                "coverage_level": coverage_level,
             },
             "security": security.to_dict(),
             "company": kw["company"],
@@ -556,6 +926,10 @@ class ScanPipeline:
                 "announcement_range": kw["announcement_meta"].get("range", ""),
                 "announcement_total": kw["announcement_meta"].get("total", 0),
                 "announcement_fetched": len(docs),
+                "announcement_base_fetched": kw["announcement_meta"].get("fetched", len(docs)),
+                "announcement_traced": max(
+                    0, len(docs) - int(kw["announcement_meta"].get("fetched", len(docs)) or 0)
+                ),
                 "documents_downloaded": len([d for d in docs if d.local_path]),
                 "documents_parsed": len([d for d in docs if d.parsed]),
                 "evidence_count": len(evidence_store.items),
@@ -568,7 +942,15 @@ class ScanPipeline:
                 "highest_severity": highest.value,
                 "risk_count": len(output.risks()),
                 "watch_count": len(output.watches()),
-                "insufficient_count": len(output.insufficient()),
+                "insufficient_count": len([
+                    o for o in output.outcomes
+                    if o.status is RuleStatus.INSUFFICIENT and o.capability == Capability.ENABLED.value
+                ]),
+                "unsupported_count": len([
+                    o for o in output.outcomes
+                    if o.capability == Capability.UNSUPPORTED_SOURCE.value
+                    and o.status is not RuleStatus.NOT_APPLICABLE
+                ]),
                 "top_findings": [
                     {
                         "rule_id": o.rule.rule_id,
@@ -596,11 +978,20 @@ class ScanPipeline:
                 if by_dimension.get(d)
             ],
             "timeline": [e.to_dict() for e in events],
+            "lifecycles": lifecycles,
+            "trace_back": trace_back,
+            "pending_clues": pending_clues,
             "mitigations": self._collect_mitigations(output),
             "gaps": list(dict.fromkeys(self.gaps)),
+            "gap_details": [
+                {"severity": gaps.classify_gap(g).value, "message": g}
+                for g in dict.fromkeys(self.gaps)
+            ],
             "notes": list(dict.fromkeys(self.notes)),
             "financial_facts": [f.to_dict() for f in facts.facts],
             "missing_data": self._collect_missing(output),
+            "unsupported_data": self._collect_unsupported(output),
+            "capability_summary": self._capability_summary(output),
             "evidence": {k: v.to_dict() for k, v in evidence_store.items.items()},
             "documents": [d.to_dict() for d in docs],
             "ai": {
@@ -619,7 +1010,7 @@ class ScanPipeline:
                 ),
             },
         }
-        payload["scan"]["status"] = "部分完成" if (kw["timed_out"] or self.gaps) else "完成"
+        payload["scan"]["status"] = TaskStatus.TIMEOUT.value if kw["timed_out"] else TaskStatus.SUCCEEDED.value
         return payload
 
     def _build_trends(self, facts: FactSet) -> dict[str, list[dict[str, Any]]]:
@@ -669,11 +1060,62 @@ class ScanPipeline:
     def _collect_missing(output: EngineOutput) -> list[dict[str, str]]:
         out = []
         for o in output.outcomes:
-            if o.status is RuleStatus.INSUFFICIENT:
+            if o.status is RuleStatus.INSUFFICIENT and o.capability == Capability.ENABLED.value:
                 out.append(
                     {"rule_id": o.rule.rule_id, "name": o.rule.name, "reason": o.finding}
                 )
         return out
+
+    @staticmethod
+    def _collect_unsupported(output: EngineOutput) -> list[dict[str, str]]:
+        """数据源暂不支持的行业检查：可展示「尚缺数据能力」，不冒充已执行。
+
+        仅统计适用但缺少数据能力的检查；对当前主体不适用（NOT_APPLICABLE）的
+        行业规则不列入，避免把「不适用」误报成「数据源缺失」。
+        """
+        out = []
+        for o in output.outcomes:
+            if (o.capability == Capability.UNSUPPORTED_SOURCE.value
+                    and o.status is not RuleStatus.NOT_APPLICABLE):
+                out.append(
+                    {
+                        "rule_id": o.rule.rule_id,
+                        "name": o.rule.name,
+                        "dimension": o.rule.dimension.value,
+                        "reason": o.finding,
+                    }
+                )
+        return out
+
+    @staticmethod
+    def _capability_summary(output: EngineOutput) -> dict[str, Any]:
+        """行业规则能力摘要：仅统计适用于当前主体的检查。
+
+        enabled = 已具备可靠数据字段；unsupported_source = 数据源暂不支持。
+        不适用（NOT_APPLICABLE）的检查既不属 enabled 也不属 unsupported。
+        """
+        enabled = 0
+        unsupported = 0
+        unsupported_rules: list[dict[str, str]] = []
+        for o in output.outcomes:
+            if o.status is RuleStatus.NOT_APPLICABLE:
+                continue
+            if o.capability == Capability.UNSUPPORTED_SOURCE.value:
+                unsupported += 1
+                unsupported_rules.append(
+                    {
+                        "rule_id": o.rule.rule_id,
+                        "name": o.rule.name,
+                        "dimension": o.rule.dimension.value,
+                    }
+                )
+            else:
+                enabled += 1
+        return {
+            "enabled": enabled,
+            "unsupported_source": unsupported,
+            "unsupported_rules": unsupported_rules,
+        }
 
     def _limitations(self) -> list[str]:
         items = [

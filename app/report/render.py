@@ -146,8 +146,9 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     # 旧版本未记录的可选展示元数据，在输入边界显式提供兼容默认；模板仍严格检查变量名。
     defaults = {
         "security": {"exchange": "", "industry": "", "currency": ""},
-        "scan": {"started_at": "", "status": "", "timed_out": False},
-        "data_scope": {"announcement_range": "", "announcement_fetched": 0, "documents_downloaded": 0,
+        "scan": {"started_at": "", "status": "", "timed_out": False, "coverage_level": ""},
+        "data_scope": {"announcement_range": "", "announcement_fetched": 0,
+                       "announcement_base_fetched": 0, "announcement_traced": 0, "documents_downloaded": 0,
                        "evidence_count": 0, "evidence_verified": 0, "latest_period_label": "", "latest_period": ""},
         "summary": {"risk_count": 0, "watch_count": 0, "insufficient_count": 0, "highest_severity": "未定", "top_findings": []},
         "method": {"disclaimer": "", "limitations": []},
@@ -156,13 +157,20 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     }
     for key, fallback in defaults.items():
         payload[key] = {**fallback, **(payload.get(key) or {})}
-    payload["ai"]["usage"] = {"available": False, "model": "", "calls": 0, "spent_cny": 0,
+    payload["ai"]["usage"] = {"available": False, "model": "", "calls": 0, "cache_hits": 0, "spent_cny": 0,
                               "reason": "", "failures": [], **(payload["ai"].get("usage") or {})}
     for dim in payload.get("dimensions") or []:
         for result in dim.get("results") or []:
             for key, value in {"evidence_ids": [], "mitigations": [], "to_verify": [], "still_effective": None,
                                "ai_interpreted": False, "strength": "线索待核实", "why": ""}.items():
                 result.setdefault(key, value)
+    # V1.2 生命周期字段：旧报告或测试载荷的时间线条目可能缺少这些键，渲染前补齐默认。
+    for ev in payload.get("timeline") or []:
+        for key, value in {"event_id": "", "title": "", "occurred_date": "", "category": "",
+                           "lifecycle_stage": "", "summary": "", "resolved": None,
+                           "resolution_note": "", "resolution_basis": "", "resolution_date": "",
+                           "evidence_ids": [], "source_doc_id": ""}.items():
+            ev.setdefault(key, value)
     trends = payload.get("trends") or {}
     chart_blocks = []
     for key, title, color in TREND_SPECS:
@@ -185,7 +193,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     evaluated = sum(r.get("status") in {"发现风险", "需要关注", "已覆盖资料中未发现明显异常"}
                     for dim in dimensions for r in dim.get("results") or [])
     if coverage.get("evaluated", evaluated) == 0 or evaluated == 0:
-        risk_score.update(score="—", grade="—", label="资料不足，暂不形成评级")
+        risk_score.update(score="—", grade="—", label="资料不足，暂不形成风险信号密度评分")
     elif summary.get("insufficient_count") or payload.get("gaps"):
         if risk_score["grade"] == "A":
             risk_score["label"] = "已覆盖项目风险信号较少，仍有资料缺口"
@@ -198,6 +206,23 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     # 证据索引
     evidence_map = payload.get("evidence") or {}
     documents = payload.get("documents") or []
+    documents_by_id = {
+        str(doc.get("doc_id") or ""): doc
+        for doc in documents
+        if isinstance(doc, dict) and doc.get("doc_id")
+    }
+
+    # V1.2：证据复核率（独立于覆盖率的可信度指标）。
+    data_scope = payload.get("data_scope") or {}
+    evidence_count = int(data_scope.get("evidence_count") or 0)
+    evidence_verified = int(data_scope.get("evidence_verified") or 0)
+    evidence_rate = round(evidence_verified / evidence_count * 100, 1) if evidence_count else None
+
+    # V1.2 阶段 6：行业规则数据能力状态。旧报告无该字段时给兼容默认。
+    capability_summary = payload.get("capability_summary") or {
+        "enabled": 0, "unsupported_source": 0, "unsupported_rules": [],
+    }
+    unsupported_data = payload.get("unsupported_data") or []
 
     return {
         "payload": payload,
@@ -208,6 +233,8 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
         "data_scope": payload.get("data_scope") or {},
         "summary": summary,
         "coverage": coverage,
+        "coverage_level": (payload.get("scan") or {}).get("coverage_level") or "",
+        "evidence_rate": evidence_rate,
         "metrics": metrics,
         "industry_pack": payload.get("industry_pack") or "general",
         "chart_blocks": chart_blocks,
@@ -221,12 +248,17 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
         "dimensions": dimensions,
         "dimension_desc": _dimension_desc,
         "timeline": payload.get("timeline") or [],
+        "lifecycles": payload.get("lifecycles") or [],
+        "pending_clues": payload.get("pending_clues") or [],
         "mitigations": payload.get("mitigations") or [],
         "gaps": payload.get("gaps") or [],
         "notes": payload.get("notes") or [],
         "missing_data": payload.get("missing_data") or [],
+        "unsupported_data": unsupported_data,
+        "capability_summary": capability_summary,
         "evidence_map": evidence_map,
         "documents": documents,
+        "documents_by_id": documents_by_id,
         "ai": payload.get("ai") or {},
         "method": payload.get("method") or {},
         "plan": payload.get("plan") or {},

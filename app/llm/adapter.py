@@ -21,8 +21,14 @@ from typing import Any, Optional
 import httpx
 
 from app.config import LLMConfig, settings
-from app.core.db import save_llm_usage
+from app.core.db import bump_stat, save_llm_usage
 from app.core.http_client import HttpClient, FetchError
+from app.llm import cache
+
+# 提示词版本：改动任何业务提示词（system/user 文案、字段要求）时递增，使旧缓存失效。
+PROMPT_VERSION = "2"
+# 校验版本：改动返回结构的校验规则时递增，使旧缓存失效。
+VALIDATION_VERSION = "1"
 
 
 @dataclass
@@ -34,6 +40,7 @@ class LLMResult:
     output_tokens: int = 0
     cost_cny: float = 0.0
     skipped_reason: str = ""
+    cached: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -43,6 +50,7 @@ class LLMResult:
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
             "cost_cny": round(self.cost_cny, 4),
+            "cached": self.cached,
         }
 
 
@@ -58,6 +66,7 @@ class LLMAdapter:
         self.task_id = task_id
         self.spent_cny = 0.0
         self.calls = 0
+        self.cache_hits = 0
         self.failures: list[str] = []
         self.deadline: float | None = None
         self._reserved_cny = 0.0
@@ -121,6 +130,54 @@ class LLMAdapter:
     # ------------------------------------------------------------ 调用
 
     def chat_json(
+        self,
+        system: str,
+        user: str,
+        *,
+        step: str = "",
+        max_tokens: Optional[int] = None,
+    ) -> LLMResult:
+        """带持久化缓存的模型调用。
+
+        - 同键并发去重：同一缓存键的并发请求只触发一次模型调用；
+        - 缓存命中返回一致的结构化结果，不计入本次调用与成本；
+        - 失败（截断、HTTP 错误、无法解析、结构非法）不写入缓存。
+        """
+        if not self.available:
+            return LLMResult(ok=False, skipped_reason=self.unavailable_reason)
+        key = cache.compute_cache_key(
+            self.config, system, user, step=step, max_tokens=max_tokens,
+            prompt_version=PROMPT_VERSION, validation_version=VALIDATION_VERSION,
+        )
+        with cache.key_lock(key):
+            cached = cache.get(key)
+            if cached is not None and cached.get("validation_version") == VALIDATION_VERSION:
+                with self._state_lock:
+                    self.cache_hits += 1
+                bump_stat("llm_cache_hits")
+                return LLMResult(
+                    ok=True,
+                    data=cached.get("data"),
+                    input_tokens=cached.get("input_tokens", 0),
+                    output_tokens=cached.get("output_tokens", 0),
+                    cost_cny=cached.get("cost_cny", 0.0),
+                    cached=True,
+                )
+            bump_stat("llm_cache_misses")
+            result = self._chat_json_uncached(system, user, step=step, max_tokens=max_tokens)
+            # 仅缓存成功且结构合法（本工程所有业务步骤均期待 JSON 数组）的结果。
+            if result.ok and isinstance(result.data, list) and not result.error:
+                cache.put(
+                    key,
+                    data=result.data,
+                    input_tokens=result.input_tokens,
+                    output_tokens=result.output_tokens,
+                    cost_cny=result.cost_cny,
+                    validation_version=VALIDATION_VERSION,
+                )
+            return result
+
+    def _chat_json_uncached(
         self,
         system: str,
         user: str,
@@ -231,6 +288,8 @@ class LLMAdapter:
         batches: list[Any],
         build_prompt: Any,
         step: str,
+        *,
+        max_tokens: int | None = None,
     ) -> LLMResult:
         """分批调用并合并结果。
 
@@ -250,12 +309,12 @@ class LLMAdapter:
             if len(user) > self.config.max_input_chars:
                 failures.append(f"批次 {len(batch)} 条超出输入长度限制，未截断结构化资料")
                 continue
-            estimated = self._estimate(system, user)
+            estimated = self._estimate(system, user, max_tokens)
             jobs.append((batch, system, user, estimated))
 
         def invoke(job: tuple[list[Any], str, str, float]) -> LLMResult:
             try:
-                return self.chat_json(job[1], job[2], step=step)
+                return self.chat_json(job[1], job[2], step=step, max_tokens=max_tokens)
             except Exception as exc:  # 单批异常不得中断其他独立批次
                 msg = f"批次 {len(job[0])} 条：{type(exc).__name__}: {exc}"[:200]
                 self._add_failure(msg)
@@ -338,29 +397,39 @@ class LLMAdapter:
         return self._run_batched(batches, build, "interpret")
 
     def extract_events(self, docs_context: list[dict[str, Any]]) -> LLMResult:
-        """从公告标题与片段中提取风险事件及后续进展线索。"""
+        """从公告标题与片段中提取候选风险事件。
+
+        模型只产生候选事件：必须给出 doc_id 与 evidence_quote，日期由程序采用公告日期，
+        不采信模型自由生成的日期；候选事件须经原文复核通过才升级为正式事件。
+        """
         if not self.available:
             return LLMResult(ok=False, skipped_reason=self.unavailable_reason)
 
         def build(batch: list[Any]) -> tuple[str, str]:
             system = (
                 "你是信息披露分析助手。只从给定公告标题与片段中提取事件，"
-                "不得推断片段以外的信息。输出必须是严格的 JSON 数组。"
+                "不得推断片段以外的信息，不得虚构引文。输出必须是严格的 JSON 数组。"
             )
             user = (
                 "以下是该公司近期公告的标题与正文片段：\n"
                 + json.dumps(batch, ensure_ascii=False)[:18000]
                 + "\n\n请提取其中可能构成基本面风险的事件，每项输出：\n"
-                "title(事件标题), occurred_date(YYYY-MM-DD，取自公告日期), "
-                "category(财务/偿债/治理/监管/经营 之一), summary(中文，60-150字), "
-                "doc_id(对应的公告 ID), resolved(true/false/null), "
-                "resolution_note(若已解除则说明依据)。\n"
+                "title(事件标题), category(必须来自固定枚举：监管处罚/监管调查/诉讼/"
+                "资产冻结/监管问询/上市地位/财务更正/盈利警告/审计机构/股权质押/"
+                "担保/关联交易/高管变动/股东减持/质押冻结 之一), "
+                "summary(中文，60-150字), doc_id(对应的公告 ID), "
+                "evidence_quote(从片段中逐字摘录的可引用原文，不超过 80 字，必须能在原文中找到), "
+                "resolved(true/false/null), resolution_note(若已解除则说明依据)。\n"
+                "不要输出 occurred_date 字段，日期由程序确定。\n"
                 "只输出 JSON 数组，不要额外文字。"
             )
             return system, user
 
         batches = [docs_context[i : i + 10] for i in range(0, len(docs_context), 10)]
-        return self._run_batched(batches, build, "events")
+        # 思考模型的推理 token 与 JSON 共用输出额度。真实样本在 4k 上限曾把事件 JSON
+        # 截断；仅为事件抽取预留更充足的输出空间，不减少公告、片段或校验步骤。
+        event_max_tokens = max(self.config.max_output_tokens, 8000)
+        return self._run_batched(batches, build, "events", max_tokens=event_max_tokens)
 
     def verify(self, verification_context: dict[str, Any]) -> LLMResult:
         """独立核验：检查结论与证据在主体、时间、语义上是否对应。"""
@@ -385,6 +454,7 @@ class LLMAdapter:
     def usage_summary(self) -> dict[str, Any]:
         with self._state_lock:
             calls = self.calls
+            cache_hits = self.cache_hits
             spent_cny = self.spent_cny
             failures = list(self.failures)
         return {
@@ -392,6 +462,7 @@ class LLMAdapter:
             "available": self.available,
             "reason": "" if self.available else self.unavailable_reason,
             "calls": calls,
+            "cache_hits": cache_hits,
             "spent_cny": round(spent_cny, 4),
             "failures": list(dict.fromkeys(failures)),
         }

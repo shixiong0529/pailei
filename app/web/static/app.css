@@ -66,6 +66,10 @@ th{color:var(--muted);font-weight:600;font-size:12.5px;background:#f8fafc}
 .badge.部分完成{background:#fef3c7;color:#92400e}
 .badge.失败{background:#fee2e2;color:#991b1b}
 .badge.取消{background:#f1f5f9;color:#64748b}
+.badge.生成成功{background:#dcfce7;color:#166534}
+.badge.超时{background:#fef3c7;color:#92400e}
+.badge.生成失败{background:#fee2e2;color:#991b1b}
+.badge.cov{background:#ede9fe;color:#6d28d9;margin-left:4px}
 
 /* 扫描进度 */
 .stages{list-style:none;padding:0;margin:0}
@@ -87,6 +91,7 @@ th{color:var(--muted);font-weight:600;font-size:12.5px;background:#f8fafc}
 .stat{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:11px 13px}
 .stat .k{color:var(--muted);font-size:12px}
 .stat .v{font-size:19px;font-weight:700;margin-top:2px}
+.stat .s{color:var(--faint);font-size:12px;margin-top:2px}
 .empty{text-align:center;color:var(--faint);padding:34px 12px;font-size:14px}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted)}
 @media (max-width:640px){

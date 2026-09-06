@@ -83,6 +83,18 @@ class EvidenceStrength(str, Enum):
     WEAK = "线索待核实"
 
 
+class Capability(str, Enum):
+    """规则的数据能力状态：区分「已具备数据能力」与「数据源暂不支持」。
+
+    V1.2 阶段 6：无可靠数据字段的行业检查（银行资本充足率、保险偿付能力、
+    券商净资本等）标记为 unsupported_source，不计入「本次已执行的有效检查数量」，
+    仅在「尚缺数据能力」中展示，不冒充已完成检查。
+    """
+
+    ENABLED = "enabled"
+    UNSUPPORTED_SOURCE = "unsupported_source"
+
+
 @dataclass
 class Security:
     """证券标识。"""
@@ -235,6 +247,7 @@ class RuleResult:
     industry_pack: str = "general"
     rule_version: str = "1.0"
     ai_interpreted: bool = False
+    capability: str = Capability.ENABLED.value
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -258,18 +271,66 @@ class RiskEvent:
     resolved: Optional[bool] = None
     resolution_note: str = ""
     evidence_ids: list[str] = field(default_factory=list)
+    # ---- V1.2 生命周期字段（事件生命周期与按需历史追溯）----
+    dedup_key: str = ""                        # 同一事项的确定性关联键（案件号/公告编号/标题关键词）
+    occurrence_order: int = 0                  # 该事项第几次披露（1=首次发生）
+    lifecycle_stage: str = ""                  # 首次发生 / 最新进展 / 已解除
+    related_doc_ids: list[str] = field(default_factory=list)   # 同事项关联公告
+    resolution_basis: str = ""                 # 解除依据（后续正式披露标题）
+    resolution_date: str = ""                  # 解除依据披露日期
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
+# 事件类型的固定枚举：模型生成的候选事件只能使用这些类型，其他类型一律拒收。
+EVENT_CATEGORIES = [
+    "监管处罚", "监管调查", "诉讼", "资产冻结", "监管问询", "上市地位",
+    "财务更正", "盈利警告", "审计机构", "股权质押", "担保", "关联交易",
+    "高管变动", "股东减持", "质押冻结",
+]
+
+
 class TaskStatus(str, Enum):
+    """任务状态：是否成功生成，与「报告覆盖程度」分离表达。
+
+    旧值「完成 / 部分完成 / 失败」不再作为新任务写入；历史行保留原值，
+    展示时通过 display_status() 映射为 V1.2 口径。
+    """
+
     QUEUED = "排队"
     RUNNING = "运行"
-    PARTIAL = "部分完成"
-    SUCCEEDED = "完成"
-    FAILED = "失败"
+    SUCCEEDED = "生成成功"   # 报告已生成（无论覆盖是否完整）
+    TIMEOUT = "超时"          # 达到期限，仍生成带缺口的报告
+    FAILED = "生成失败"
     CANCELLED = "取消"
+
+
+class CoverageLevel(str, Enum):
+    """报告覆盖程度：与任务状态分离，单独表达数据覆盖缺口严重度。"""
+
+    COMPLETE = "完整"
+    MINOR = "一般缺口"
+    CRITICAL = "关键缺口"
+
+
+# 旧任务状态的展示兼容映射（不修改历史数据，只在读取展示时转换）。
+LEGACY_STATUS_LABELS = {
+    "完成": TaskStatus.SUCCEEDED.value,
+    "部分完成": TaskStatus.SUCCEEDED.value,
+    "失败": TaskStatus.FAILED.value,
+}
+
+
+def display_status(status: str | None) -> str:
+    """把历史任务状态映射为 V1.2 口径展示名；新状态原样返回。"""
+    s = status or ""
+    return LEGACY_STATUS_LABELS.get(s, s)
+
+
+def task_is_done(status: str | None) -> bool:
+    """任务是否已结束（生成成功 / 超时，以及历史「完成/部分完成」均为终态）。"""
+    return (status or "") in {"生成成功", "超时", "完成", "部分完成"}
 
 
 class Stage(str, Enum):

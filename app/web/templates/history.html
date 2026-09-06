@@ -12,14 +12,17 @@
         <td class="mono">{{ (t.created_at or '')[:16] }}</td>
         <td>{{ t.query }}</td>
         <td class="mono">{{ t.secucode or '—' }}</td>
-        <td><span class="badge {{ t.status }}">{{ t.status }}</span></td>
+        <td>
+          <span class="badge {{ status_label(t.status) }}">{{ status_label(t.status) }}</span>
+          {% if t.coverage_level and task_done(t.status) %}<span class="badge cov">{{ t.coverage_level }}</span>{% endif %}
+        </td>
         <td>{% if t.elapsed_ms %}{{ '%.1f'|format(t.elapsed_ms/1000) }}s{% else %}—{% endif %}</td>
         <td>
-          {% if t.status in ['完成','部分完成'] %}
+          {% if task_done(t.status) %}
             <a href="/report/{{ t.task_id }}">查看</a> ·
             <a href="/download/{{ t.task_id }}">下载 HTML</a>
-          {% elif t.status == '失败' %}
-            <span style="color:var(--risk)">{{ (t.error or '失败')[:60] }}</span>
+          {% elif t.status == '生成失败' or t.status == '失败' %}
+            <span style="color:var(--risk)">{{ (t.error or '生成失败')[:60] }}</span>
           {% else %}
             <a href="/scan/{{ t.task_id }}">进度</a>
           {% endif %}

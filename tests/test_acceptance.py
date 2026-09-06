@@ -115,6 +115,30 @@ class AuditChecks(unittest.TestCase):
         o=rule("OP02").evaluate(context(docs=[d],parsed={d.doc_id:p}))
         self.assertEqual(o.status,RuleStatus.RISK,o.finding)
 
+    def test_06b_going_concern_signal_prevents_op05_normal_conclusion(self):
+        ordinary=doc("普通专项审计报告",kind="审计",did="audit")
+        d=doc(kind="年报",did="annual")
+        p=ParsedDoc(d.doc_id,1,[(1,"审计报告存在与持续经营相关的重大不确定性。")],False)
+        o=rule("OP05").evaluate(context(
+            [fact("net_profit","2026-06-30",-100.),fact("ocf","2026-06-30",50.)],
+            docs=[ordinary,d],parsed={
+                ordinary.doc_id: ParsedDoc(ordinary.doc_id,1,[(1,"标准无保留意见。")],False),
+                d.doc_id:p,
+            },
+        ))
+        self.assertNotEqual(o.status,RuleStatus.NORMAL,o.finding)
+        self.assertIn("持续经营重大不确定性",o.finding)
+
+    def test_06c_gv01_does_not_call_going_concern_document_routine(self):
+        d=doc(
+            "会计师事务所关于审计报告带有持续经营重大不确定性段落的专项说明",
+            "审计机构",
+        )
+        o=rule("GV01").evaluate(context(docs=[d]))
+        self.assertEqual(o.status,RuleStatus.NORMAL)
+        self.assertIn("其他审计相关文件 1 份",o.finding)
+        self.assertNotIn("均为续聘或履职评估类",o.finding)
+
     def test_07_traditional_audit_signal(self):
         p=ParsedDoc("hk",1,[(1,"由於上述事項的重要性，我們無法表示意見。")],False)
         self.assertTrue(scan_audit_opinions(p),"港股繁体无法表示意见未识别")
@@ -277,15 +301,19 @@ class AuditChecks(unittest.TestCase):
         pipe=ScanPipeline("event_test")
         fake=SimpleNamespace(available=True,extract_events=lambda x:LLMResult(True,data=[{"doc_id":"nonexistent","title":"虚构事件"}]))
         pipe.llm=fake
-        try:self.assertEqual(pipe._extract_events([d],{"doc1":p}),[])
+        try:formal, clues = pipe._extract_events([d],{"doc1":p})
         finally:pipe.close()
+        self.assertEqual(formal,[])
+        self.assertEqual(len(clues),1)
+        self.assertIn("不在本批输入", clues[0]["reason"])
 
     def test_32_llm_parse_failure_nonfatal(self):
         pipe=ScanPipeline("event_test")
         pipe.llm=SimpleNamespace(available=True,extract_events=lambda x:LLMResult(True,data=[]))
         try:
-            ev=pipe._extract_events([doc()],{"doc1":ParsedDoc("doc1",0,[],False,error="bad pdf")})
-            self.assertEqual(ev,[])
+            formal, clues = pipe._extract_events([doc()],{"doc1":ParsedDoc("doc1",0,[],False,error="bad pdf")})
+            self.assertEqual(formal,[])
+            self.assertEqual(clues,[])
         finally:pipe.close()
 
     def test_33_ai_downgrade_recomputes_coverage(self):

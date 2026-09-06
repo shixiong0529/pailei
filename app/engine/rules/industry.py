@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from app.core.models import Dimension, RuleStatus, Severity
+from app.core.models import Capability, Dimension, RuleStatus, Severity
 from app.engine.rules.base import Rule, RuleContext, fmoney, fnum
 
 # 行业关键词 → 规则包
@@ -86,9 +86,11 @@ def build_bank_rules() -> list[Rule]:
         Rule("BK02", "利息净收入依赖度", Dimension.OPERATION, "收入结构",
              packs=["bank"], check=_bk02),
         Rule("BK03", "资产质量与拨备", Dimension.FINANCIAL_QUALITY,
-             "不良率与拨备覆盖", packs=["bank"], check=_bk03),
+             "不良率与拨备覆盖", packs=["bank"], check=_bk03,
+             capability=Capability.UNSUPPORTED_SOURCE.value),
         Rule("BK04", "资本充足水平", Dimension.SOLVENCY,
-             "资本充足率", packs=["bank"], check=_bk04),
+             "资本充足率", packs=["bank"], check=_bk04,
+             capability=Capability.UNSUPPORTED_SOURCE.value),
     ]
 
 
@@ -135,9 +137,11 @@ def build_insurance_rules() -> list[Rule]:
         Rule("IN02", "赔付率", Dimension.FINANCIAL_QUALITY, "赔付支出 / 已赚保费",
              packs=["insurance"], check=_in02),
         Rule("IN03", "偿付能力充足率", Dimension.SOLVENCY, "监管偿付能力指标",
-             packs=["insurance"], check=_in03),
+             packs=["insurance"], check=_in03,
+             capability=Capability.UNSUPPORTED_SOURCE.value),
         Rule("IN04", "准备金充足性", Dimension.FINANCIAL_QUALITY, "准备金计提",
-             packs=["insurance"], check=_in04),
+             packs=["insurance"], check=_in04,
+             capability=Capability.UNSUPPORTED_SOURCE.value),
     ]
 
 
@@ -184,9 +188,11 @@ def build_broker_rules() -> list[Rule]:
         Rule("BR02", "回购融资杠杆", Dimension.SOLVENCY, "卖出回购 / 总资产",
              packs=["broker"], check=_br02),
         Rule("BR03", "净资本与流动性", Dimension.SOLVENCY, "券商监管指标",
-             packs=["broker"], check=_br03),
+             packs=["broker"], check=_br03,
+             capability=Capability.UNSUPPORTED_SOURCE.value),
         Rule("BR04", "信用业务风险", Dimension.SOLVENCY, "两融与股票质押",
-             packs=["broker"], check=_br04),
+             packs=["broker"], check=_br04,
+             capability=Capability.UNSUPPORTED_SOURCE.value),
     ]
 
 

@@ -49,6 +49,46 @@
 </div>
 
 <div class="card">
+  <h2>缓存命中率</h2>
+  <div class="statgrid">
+    <div class="stat">
+      <div class="k">模型缓存命中</div>
+      <div class="v">{% if cache.llm_rate is not none %}{{ cache.llm_rate }}%{% else %}—{% endif %}</div>
+      <div class="s">{{ cache.llm_hits }} 命中 / {{ cache.llm_misses }} 未命中</div>
+    </div>
+    <div class="stat">
+      <div class="k">PDF 解析缓存命中</div>
+      <div class="v">{% if cache.pdf_rate is not none %}{{ cache.pdf_rate }}%{% else %}—{% endif %}</div>
+      <div class="s">{{ cache.pdf_hits }} 命中 / {{ cache.pdf_misses }} 未命中</div>
+    </div>
+  </div>
+  <p style="color:var(--muted);font-size:13px;margin-top:12px">
+    命中率按进程累计的「命中 / (命中 + 未命中)」计算；重启后计数清零。
+  </p>
+</div>
+
+<div class="card">
+  <h2>阶段耗时</h2>
+  {% if stages %}
+  <table>
+    <thead><tr><th>阶段</th><th class="num">次数</th><th class="num">平均耗时</th><th class="num">最长耗时</th></tr></thead>
+    <tbody>
+    {% for s in stages %}
+      <tr>
+        <td>{{ s.stage }}</td>
+        <td class="num">{{ s.n }}</td>
+        <td class="num">{{ '%.2f'|format((s.avg_ms or 0)/1000) }} 秒</td>
+        <td class="num">{{ '%.2f'|format((s.max_ms or 0)/1000) }} 秒</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">暂无阶段耗时记录</div>
+  {% endif %}
+</div>
+
+<div class="card">
   <h2>任务统计</h2>
   <table>
     <thead><tr><th>状态</th><th class="num">数量</th></tr></thead>

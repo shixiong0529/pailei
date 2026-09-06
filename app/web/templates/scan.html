@@ -3,15 +3,16 @@
 {% block content %}
 <div class="card">
   <h2>
-    <span id="status-badge" class="badge {{ task.status }}">{{ task.status }}</span>
+    <span id="status-badge" class="badge {{ status_label(task.status) }}">{{ status_label(task.status) }}</span>
+    {% if task.coverage_level and task_done(task.status) %}<span id="cov-badge" class="badge cov">{{ task.coverage_level }}</span>{% endif %}
     <span style="margin-left:8px">{{ task.query }}</span>
     <span class="mono" style="margin-left:8px">{{ task.secucode or '' }}</span>
   </h2>
 
   <ul class="stages" id="stages">
     {% for s in stages %}
-    <li data-stage="{{ loop.index0 }}" class="{% if (task.stage_index or 0) > loop.index0 %}done{% elif (task.stage_index or 0) == loop.index0 %}{% if task.status in ['完成','部分完成'] %}done{% else %}active{% endif %}{% endif %}">
-      <span class="dot">{% if (task.stage_index or 0) > loop.index0 or task.status in ['完成','部分完成'] %}✓{% else %}{{ loop.index }}{% endif %}</span>
+    <li data-stage="{{ loop.index0 }}" class="{% if (task.stage_index or 0) > loop.index0 %}done{% elif (task.stage_index or 0) == loop.index0 %}{% if task_done(task.status) %}done{% else %}active{% endif %}{% endif %}">
+      <span class="dot">{% if (task.stage_index or 0) > loop.index0 or task_done(task.status) %}✓{% else %}{{ loop.index }}{% endif %}</span>
       <div>
         <div class="nm">{{ s }}</div>
         <div class="ds">{{ stage_detail[s] }}</div>
@@ -47,6 +48,8 @@ async function poll(){
     if (!r.ok) return;
     document.getElementById('status-badge').textContent = r.status;
     document.getElementById('status-badge').className = 'badge ' + r.status;
+    const cov = document.getElementById('cov-badge');
+    if (cov) { cov.textContent = r.coverage_level || ''; cov.style.display = r.coverage_level ? '' : 'none'; }
     document.getElementById('facts').textContent = r.facts;
     document.getElementById('docs').textContent = r.documents;
     if (r.elapsed_ms) document.getElementById('elapsed').textContent = (r.elapsed_ms/1000).toFixed(1) + 's';
@@ -54,7 +57,7 @@ async function poll(){
     const idx = r.stage_index || 0;
     document.querySelectorAll('#stages li').forEach(li => {
       const i = parseInt(li.dataset.stage, 10);
-      const done = r.status === '完成' || r.status === '部分完成' || i < idx;
+      const done = r.done || i < idx;
       const active = i === idx && r.status === '运行';
       li.className = done ? 'done' : (active ? 'active' : '');
       li.querySelector('.dot').textContent = done ? '✓' : String(i + 1);
@@ -70,9 +73,9 @@ async function poll(){
     if (r.has_report) {
       document.getElementById('open').style.display = 'inline-block';
       document.getElementById('bar').style.width = '100%';
-      if (r.status === '完成' || r.status === '部分完成') { clearInterval(timer); return; }
+      if (r.done) { clearInterval(timer); return; }
     }
-    if (r.status === '失败' || r.status === '取消') { clearInterval(timer); }
+    if (r.status === '生成失败' || r.status === '取消') { clearInterval(timer); }
   } catch (e) { /* 网络抖动继续重试 */ }
 }
 const timer = setInterval(poll, 1500);
