@@ -195,6 +195,23 @@ CREATE TABLE IF NOT EXISTS llm_cache (
     payload     TEXT,
     created_at  TEXT
 );
+
+CREATE TABLE IF NOT EXISTS stage_timings (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id     TEXT,
+    stage       TEXT,
+    stage_index INTEGER,
+    started_at  TEXT,
+    ended_at    TEXT,
+    elapsed_ms  INTEGER,
+    summary     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_stage_task ON stage_timings(task_id);
+
+CREATE TABLE IF NOT EXISTS runtime_stats (
+    key   TEXT PRIMARY KEY,
+    value INTEGER DEFAULT 0
+);
 """
 
 _lock = threading.Lock()
@@ -526,6 +543,86 @@ def llm_cache_count() -> int:
     with connect() as conn:
         row = conn.execute("SELECT COUNT(*) n FROM llm_cache").fetchone()
     return int(row["n"]) if row else 0
+
+
+# ------------------------------------------------------------------- 运行诊断
+
+def record_stage(
+    task_id: str, stage: str, stage_index: int,
+    started_at: float, ended_at: float, elapsed_ms: int, summary: str = "",
+) -> None:
+    with _lock, tx() as conn:
+        conn.execute(
+            "INSERT INTO stage_timings (task_id, stage, stage_index, started_at,"
+            " ended_at, elapsed_ms, summary) VALUES (?,?,?,?,?,?,?)",
+            (
+                task_id, stage, stage_index,
+                datetime.fromtimestamp(started_at).isoformat(timespec="seconds"),
+                datetime.fromtimestamp(ended_at).isoformat(timespec="seconds"),
+                elapsed_ms, (summary or "")[:500],
+            ),
+        )
+
+
+def stage_timings(task_id: str) -> list[dict[str, Any]]:
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM stage_timings WHERE task_id=? ORDER BY stage_index", (task_id,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def stage_stats() -> list[dict[str, Any]]:
+    """各阶段耗时统计（多次扫描聚合），按阶段顺序返回。"""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT stage, COUNT(*) n, CAST(AVG(elapsed_ms) AS INTEGER) avg_ms,"
+            " MAX(elapsed_ms) max_ms FROM stage_timings"
+            " GROUP BY stage ORDER BY MIN(stage_index)"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def bump_stat(key: str, delta: int = 1) -> None:
+    with _lock, tx() as conn:
+        conn.execute(
+            "INSERT INTO runtime_stats(key,value) VALUES(?,?)"
+            " ON CONFLICT(key) DO UPDATE SET value=value+excluded.value",
+            (key, delta),
+        )
+
+
+def stats() -> dict[str, int]:
+    with connect() as conn:
+        rows = conn.execute("SELECT key, value FROM runtime_stats").fetchall()
+    return {r["key"]: int(r["value"]) for r in rows}
+
+
+def clear_llm_cache() -> int:
+    with _lock, tx() as conn:
+        cur = conn.execute("DELETE FROM llm_cache")
+    return cur.rowcount
+
+
+def superseded_report_rows() -> list[dict[str, Any]]:
+    """返回可清理的旧报告版本行（同一任务保留最新一版，其余为历史版本）。"""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM reports r WHERE r.version < "
+            "(SELECT MAX(version) FROM reports WHERE task_id=r.task_id)"
+            " ORDER BY r.created_at"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def clear_superseded_reports() -> int:
+    """删除被取代的旧报告版本行（不删除任何报告文件，最新版本保留）。"""
+    with _lock, tx() as conn:
+        cur = conn.execute(
+            "DELETE FROM reports WHERE version < "
+            "(SELECT MAX(r2.version) FROM reports r2 WHERE r2.task_id = reports.task_id)"
+        )
+    return cur.rowcount
 
 
 # ------------------------------------------------------------------- 明细读取

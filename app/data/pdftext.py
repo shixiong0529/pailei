@@ -128,12 +128,15 @@ def parse_pdf(
     import sys
     if timeout <= 0:
         return ParsedDoc(Path(path).stem, 0, [], True, "解析超时：任务期限已到")
+    from app.core.db import bump_stat
     path = Path(path)
     max_pages = max_pages or settings.max_pdf_pages
     sha = sha256 or _file_sha256(path)
     cached = _load_cache(sha, max_pages, start_page)
     if cached is not None:
+        bump_stat("pdf_cache_hits")
         return cached
+    bump_stat("pdf_cache_misses")
     try:
         result = subprocess.run(
             [sys.executable, "-m", "app.data.pdftext", str(path.resolve()),

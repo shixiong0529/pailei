@@ -21,7 +21,7 @@ from typing import Any, Optional
 import httpx
 
 from app.config import LLMConfig, settings
-from app.core.db import save_llm_usage
+from app.core.db import bump_stat, save_llm_usage
 from app.core.http_client import HttpClient, FetchError
 from app.llm import cache
 
@@ -154,6 +154,7 @@ class LLMAdapter:
             if cached is not None and cached.get("validation_version") == VALIDATION_VERSION:
                 with self._state_lock:
                     self.cache_hits += 1
+                bump_stat("llm_cache_hits")
                 return LLMResult(
                     ok=True,
                     data=cached.get("data"),
@@ -162,6 +163,7 @@ class LLMAdapter:
                     cost_cny=cached.get("cost_cny", 0.0),
                     cached=True,
                 )
+            bump_stat("llm_cache_misses")
             result = self._chat_json_uncached(system, user, step=step, max_tokens=max_tokens)
             # 仅缓存成功且结构合法（本工程所有业务步骤均期待 JSON 数组）的结果。
             if result.ok and isinstance(result.data, list) and not result.error:

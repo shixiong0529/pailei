@@ -19,6 +19,7 @@ from typing import Any
 from app.config import settings
 from app.core.http_client import FetchError, HttpClient
 from app.core.models import DisclosureDoc, now_iso
+from app.core.storage import dedup
 
 QUERY_URL = "http://www.cninfo.com.cn/new/hisAnnouncement/query"
 SEARCH_URL = "http://www.cninfo.com.cn/new/information/topSearch/query"
@@ -195,16 +196,17 @@ class CninfoClient:
         files_dir = files_dir or settings.files_dir
         target = files_dir / doc.source / f"{doc.doc_id.replace(':', '_')}.pdf"
         if target.exists() and target.stat().st_size > 0:
-            doc.local_path = str(target)
-            doc.sha256 = _sha256(target)
+            sha = _sha256(target)
+            doc.sha256 = sha
+            doc.local_path = str(dedup(target, sha))
             doc.size_bytes = target.stat().st_size
             return doc
         try:
             self.client.download(
                 doc.url, target, stage="cninfo:download", referer="http://www.cninfo.com.cn/"
             )
-            doc.local_path = str(target)
             doc.sha256 = _sha256(target)
+            doc.local_path = str(dedup(target, doc.sha256))
             doc.size_bytes = target.stat().st_size
         except FetchError as exc:
             doc.parse_error = str(exc)[:300]

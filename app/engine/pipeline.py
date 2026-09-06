@@ -109,10 +109,33 @@ class ScanPipeline:
         self.em = EastmoneyClient(self.http)
         self.llm = LLMAdapter(task_id=self.task_id)
         self.llm.deadline = self.deadline
+        # V1.2 阶段 7：记录八个流水线阶段的墙钟耗时与结果摘要。
+        self._current_stage: Stage | None = None
+        self._stage_started: float = 0.0
+        self._stage_summary: dict[str, str] = {}
 
     # ------------------------------------------------------------ 工具
 
+    def _record_stage(self) -> None:
+        """结束当前阶段，落库阶段耗时与结果摘要（由下一阶段进入时触发）。"""
+        if self._current_stage is None:
+            return
+        now = time.time()
+        elapsed_ms = int((now - self._stage_started) * 1000)
+        db.record_stage(
+            self.task_id,
+            self._current_stage.value,
+            STAGE_ORDER.index(self._current_stage),
+            self._stage_started,
+            now,
+            elapsed_ms,
+            self._stage_summary.get(self._current_stage.value, ""),
+        )
+
     def _checkpoint(self, stage: Stage) -> None:
+        self._record_stage()
+        self._current_stage = stage
+        self._stage_started = time.time()
         self.http.deadline = self.deadline
         self.llm.deadline = self.deadline
         db.update_task(
@@ -173,6 +196,7 @@ class ScanPipeline:
             )
 
         # ---------- 2. 检索规划 ----------
+        self._stage_summary[Stage.IDENTIFY.value] = f"{security.name}（{security.secucode}）"
         self._checkpoint(Stage.PLAN)
         end = date.today()
         start = end - timedelta(days=30 * settings.announcement_months)
@@ -188,6 +212,7 @@ class ScanPipeline:
         self.stage_notes["检索规划"] = f"公告区间 {start} ~ {end}，行业规则包 {industry_pack}"
 
         # ---------- 3. 资料获取 ----------
+        self._stage_summary[Stage.PLAN.value] = self.stage_notes.get("检索规划", "")
         self._checkpoint(Stage.COLLECT)
         docs, announcement_meta = [], {"source": "", "total": 0, "range": f"{start} ~ {end}"}
         if self._time_left() > 0:
@@ -203,6 +228,9 @@ class ScanPipeline:
         db.save_fetch_logs(self.task_id, self.http.records)
 
         # ---------- 4. 标准化 ----------
+        self._stage_summary[Stage.COLLECT.value] = (
+            f"公告 {len(docs)} 条，下载 {len([d for d in docs if d.local_path])} 份"
+        )
         self._checkpoint(Stage.NORMALIZE)
         raw_facts = []
         if self._time_left() > 0:
@@ -230,6 +258,7 @@ class ScanPipeline:
             self.gaps.append("未获取到任何财务报告期数据，全部财务类检查项将判定为数据不足")
 
         # ---------- 5. 规则检查 ----------
+        self._stage_summary[Stage.NORMALIZE.value] = f"财务事实 {len(raw_facts)} 条"
         self._checkpoint(Stage.RULE)
         metrics = compute_metrics(facts, market=security.market, industry=security.industry)
         for note in metrics.notes:
@@ -250,6 +279,7 @@ class ScanPipeline:
         output = run_rules(ctx, registry)
 
         # ---------- 6. 专项阅读 ----------
+        self._stage_summary[Stage.RULE.value] = f"规则 {len(output.outcomes)} 项"
         self._checkpoint(Stage.READ)
         events, pending_clues = self._extract_events(docs, parsed_docs, evidence_store)
         # V1.2 事件生命周期：把同一事项的多份披露串成生命周期，补充解除依据与关联公告。
@@ -263,6 +293,9 @@ class ScanPipeline:
         ai_interpret(output, ctx, self.llm)
 
         # ---------- 7. 核验 ----------
+        self._stage_summary[Stage.READ.value] = (
+            f"事件 {len(events)} 项，待核实线索 {len(pending_clues)} 条"
+        )
         self._checkpoint(Stage.VERIFY)
         ai_verify(output, ctx, self.llm)
         verified_count = self._reverify_evidence(evidence_store, parsed_docs)
@@ -295,6 +328,7 @@ class ScanPipeline:
             )
 
         # ---------- 8. 报告生成 ----------
+        self._stage_summary[Stage.VERIFY.value] = f"证据复核通过 {verified_count} 条"
         self._checkpoint(Stage.REPORT)
         elapsed = time.time() - started
         timed_out = self._time_left() <= 0
@@ -328,6 +362,13 @@ class ScanPipeline:
         db.save_documents(self.task_id, docs)
         db.save_evidences(self.task_id, evidence_store.items.values())
         db.save_fetch_logs(self.task_id, self.http.records)
+
+        # 记录最后一个阶段（报告生成）的耗时与摘要，然后落库最终任务状态。
+        self._stage_summary[Stage.REPORT.value] = (
+            f"HTML {html_path}，JSON {json_path}"
+        )
+        self._record_stage()
+        self._current_stage = None
 
         # 任务状态与覆盖程度分离：状态只表达「是否成功生成」，覆盖缺口另列覆盖等级。
         status = TaskStatus.TIMEOUT if timed_out else TaskStatus.SUCCEEDED
