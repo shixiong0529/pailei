@@ -38,7 +38,8 @@ class HardeningTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.patches = [patch.object(settings,'db_path',self.root/'app.db'),
                         patch.object(settings,'reports_dir',self.root/'reports'),
-                        patch.object(settings,'files_dir',self.root/'files')]
+                        patch.object(settings,'files_dir',self.root/'files'),
+                        patch.object(settings,'cache_dir',self.root/'cache')]
         for p in self.patches:p.start()
         db.init_db()
 

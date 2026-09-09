@@ -69,7 +69,8 @@ class AuditChecks(unittest.TestCase):
         self.tmp_path = Path(self.tmp.name)
         self.patches = [patch.object(settings, "db_path", self.tmp_path / "test.db"),
                         patch.object(settings, "reports_dir", self.tmp_path / "reports"),
-                        patch.object(settings, "files_dir", self.tmp_path / "files")]
+                        patch.object(settings, "files_dir", self.tmp_path / "files"),
+                        patch.object(settings, "cache_dir", self.tmp_path / "cache")]
         for p in self.patches:
             p.start()
         db.init_db()

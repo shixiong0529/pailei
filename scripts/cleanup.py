@@ -1,15 +1,18 @@
 """安全清理命令：默认预览将删除的内容，加 --execute 才实际删除。
 
-仅清理「可再生的衍生缓存」与「被取代的旧报告版本」：
+默认模式仅清理「可再生的衍生缓存」与「被取代的旧报告版本」：
 1. PDF 解析缓存（cache_dir/pdf_parse/*.json，按需再生）；
 2. 模型结果缓存（llm_cache 表，重新调用模型即可再生）；
 3. 旧报告版本（reports 表中同一任务被更新的历史版本行）。
 
-不删除用户报告文件，不删除原始 PDF（files_dir 下的唯一原文）。
+默认模式不删除用户报告文件或原始 PDF。
+--downloads-today 独立模式只回收当天及待清理日期的下载 PDF/解析缓存，
+并通过扫描共享锁保护正在使用的文件；保留报告、财务 Raw 和模型缓存。
 
 用法：
     python scripts/cleanup.py            # 预览将删除的内容
     python scripts/cleanup.py --execute  # 实际删除
+    python scripts/cleanup.py --downloads-today --execute  # 回收下载文件
 """
 
 from __future__ import annotations
@@ -35,7 +38,13 @@ def collect_pdf_cache() -> list[Path]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="清理衍生缓存与旧报告版本")
     parser.add_argument("--execute", action="store_true", help="实际删除；缺省仅预览")
+    parser.add_argument('--downloads-today', action='store_true', help='只清理当天下载 PDF、对应解析缓存及已延后的清理日期；不清模型缓存或报告')
     args = parser.parse_args()
+    if args.downloads_today:
+        from app.core.download_cleanup import cleanup_downloads
+        import json
+        print(json.dumps(cleanup_downloads(execute=args.execute), ensure_ascii=False, indent=2))
+        return 0
 
     db.init_db()
     pdf_cache = collect_pdf_cache()

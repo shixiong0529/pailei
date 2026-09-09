@@ -68,7 +68,7 @@ python scripts/run_scan.py 00700         # 港股：腾讯控股
 python scripts/run_scan.py 000002.SZ     # 显式证券代码，避免歧义
 ```
 
-测试（321 项通过：58 项原有测试＋263 项回归；全部离线，不需要网络与密钥）：
+测试（338 项通过：58 项原有测试＋280 项回归；全部离线，不需要网络与密钥）：
 
 ```bash
 python tests/run_tests.py                                      # 原有确定性测试：58 项
@@ -82,15 +82,28 @@ python scripts/cleanup.py              # 预览将删除的内容
 python scripts/cleanup.py --execute    # 实际清理 PDF 解析缓存、模型缓存、旧报告版本行
 ```
 
-### 释放本地磁盘空间
+### 报告完成后自动清理下载文件
 
-公告 PDF、PDF 解析缓存和验收过程的 `runtime/` 目录均为可再生文件。确认当前没有扫描任务后，
-可删除这些内容；下次强制扫描会按需重新下载公告原文：
+每次扫描结束、报告保存和原文核验完成后，自动清理当天下载的公告 PDF、内容去重副本
+（`data/files/`）及当天产生/相关的 PDF 解析缓存（`data/cache/pdf_parse/`）。第三步资料获取
+和第六步历史追溯下载的 PDF 都在范围内；第七步核验只使用已解析的原文，不重新下载。
+日期按服务器本地时区计算。
+
+多个扫描并行时，最后一个使用完原文的任务统一清理；使用跨进程文件锁，覆盖 Web 和命令行扫描。
+失败扫描也清理下载残留，跨日或中断产生的待清理日期在后续任务结束时补清理。
+报告 HTML/JSON、SQLite、财务 Raw JSON、来源清单、审核底稿和模型缓存保留。
+原始 PDF 的本地副本按用户要求不长期保留；报告中的公告 URL、文件指纹和引用片段仍保留，
+日后需要复核全文时可重新下载。清理统计保存在 `data/download_cleanup/`。
+
+立即清理（默认预览；检测到运行中的扫描时会延后）：
 
 ```bash
-rm -rf data/files data/cache/pdf_parse \
-  docs/acceptance-2026-09-06/runtime docs/fixes-2026-09-06/runtime
+python scripts/cleanup.py --downloads-today
+python scripts/cleanup.py --downloads-today --execute
 ```
+
+自动清理不影响历史报告查看和 HTML 下载，但下一次强制扫描可能需要重新下载、解析相同 PDF。
+历史验收目录 `docs/*/runtime/` 不属于生产下载目录，不会自动删除。
 
 `data/reports/` 中的 HTML/JSON 是本地导出副本；Web 报告以 `data/app.db` 中的报告 payload 为事实源，
 不需要离线副本时可以删除旧文件。不要删除 `data/app.db`，除非明确要清空全部任务、报告和模型缓存。
@@ -271,7 +284,7 @@ data/publish/            # 外部分享链接的静态发布目录（单报告�
 
 **Q：如何验证报告里的证据是真的？**
 每条证据带文件名、页码和内容指纹，可在"数据来源与算法"一节回溯到原始公告 URL；
-程序在生成后还会做一次原文复核（下载文件重新解析比对），复核未通过的会在报告中标注。
+程序在生成后还会做一次原文复核（根据本次已解析页段比对引文、页码和指纹，不额外重新下载），复核未通过的会在报告中标注。
 
 **Q：想调整规则的阈值？**
 规则定义在 `app/engine/rules/general.py`（基础通用）、`extended.py`（新增深度检查）和 `app/engine/rules/industry.py`（行业包），

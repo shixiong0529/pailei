@@ -179,6 +179,11 @@ class ScanPipeline:
     # ------------------------------------------------------------ 主流程
 
     def run(self, query: str) -> ScanResult:
+        from app.core.download_cleanup import managed_download_session
+        with managed_download_session(self.task_id):
+            return self._run_session(query)
+
+    def _run_session(self, query: str) -> ScanResult:
         db.create_task(self.task_id, query)
         started = time.time()
         db.update_task(
@@ -1125,6 +1130,7 @@ class ScanPipeline:
         items = [
             "财务数据来自东方财富数据中心公开接口，非交易所官方授权数据，字段口径以接口返回为准；",
             "公告原文来自巨潮资讯网（A 股）与港交所披露易（港股）公开页面；",
+            "报告保存且原文核验完成后自动清理当天下载的本地 PDF 和解析缓存；并发扫描结束后统一清理。原文 URL、指纹及报告引文保留，后续全文复核需重新下载。",
             f"单次扫描最多下载 {settings.max_pdf_downloads} 份原文，每份最多解析 {settings.max_pdf_pages} 页，"
             "超出部分不会出现在证据中；",
             "港股报表按原会计准则与币种呈现，未做准则转换与汇率折算；",

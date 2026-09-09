@@ -1,0 +1,25 @@
+{
+  "status": "completed",
+  "task_id": "initial-cleanup",
+  "dates": [
+    "2026-09-09",
+    "2026-09-10"
+  ],
+  "at": "2026-09-10T00:05:04+08:00",
+  "candidate_files": 266,
+  "removed_files": 266,
+  "released_bytes_estimate": 38327760,
+  "error_count": 0,
+  "protected_files_unchanged": 284,
+  "checks": {
+    "http://127.0.0.1:8770/api/health": 200,
+    "http://127.0.0.1:8770/report/e2ac0b68d20a": 200
+  },
+  "tests": {
+    "baseline_passed": 58,
+    "regression_passed": 280,
+    "total_passed": 338
+  },
+  "scope": "Initial cleanup covers 2026-09-09 request date plus 2026-09-10; future scans track pending dates automatically.",
+  "cleanup_log": "/Users/shixiong/Developer/pailei/data/download_cleanup/2026-09-10-initial-cleanup.json"
+}
