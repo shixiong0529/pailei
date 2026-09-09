@@ -238,7 +238,7 @@ def init_db() -> None:
         # 向后兼容迁移：历史行未知字段保持 NULL，不伪造审计/口径属性。
         for table, columns in {
             "scan_tasks": {"coverage_level": "TEXT"},
-            "financial_facts": {"period_start": "TEXT", "audited": "INTEGER", "consolidated": "INTEGER"},
+            "financial_facts": {"period_start": "TEXT", "audited": "INTEGER", "consolidated": "INTEGER", "raw_ref": "TEXT"},
             "fetch_logs": {"record_id": "TEXT"},
             "risk_events": {
                 "dedup_key": "TEXT",
@@ -352,7 +352,7 @@ def save_facts(task_id: str, facts: Iterable[Any]) -> int:
                 f.unit, f.currency, f.period_end, f.period_type.value, f.fiscal_year,
                 f.notice_date, f.source_id, f.source_url, f.extraction,
                 1 if f.verified else 0, f.note, f.fetched_at, f.period_start,
-                None if f.audited is None else int(f.audited), int(f.consolidated),
+                None if f.audited is None else int(f.audited), int(f.consolidated), f.raw_ref,
             )
         )
     if not rows:
@@ -361,8 +361,8 @@ def save_facts(task_id: str, facts: Iterable[Any]) -> int:
         conn.executemany(
             "INSERT INTO financial_facts (task_id, secucode, statement, raw_item, std_item, value,"
             " unit, currency, period_end, period_type, fiscal_year, notice_date, source_id,"
-            " source_url, extraction, verified, note, fetched_at, period_start, audited, consolidated) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " source_url, extraction, verified, note, fetched_at, period_start, audited, consolidated, raw_ref) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             rows,
         )
     return len(rows)

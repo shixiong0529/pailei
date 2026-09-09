@@ -223,6 +223,8 @@ def _ms_to_date(value: Any) -> str:
 
 
 def _classify(title: str) -> str:
+    if "证券变动月报表" in title or "證券變動月報表" in title:
+        return "月报表"
     # 先判断事项，再判断载体（年度报告等），避免风险公告被归成普通财报。
     for key, label in [
         ("解除冻结", "冻结解除"), ("解除司法冻结", "冻结解除"),

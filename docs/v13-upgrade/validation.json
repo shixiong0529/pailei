@@ -1,0 +1,221 @@
+{
+  "date": "2026-09-09",
+  "rule_version": "1.3",
+  "tests": {
+    "baseline": 58,
+    "regression": 263,
+    "new_upgrade_tests": 56,
+    "total": 321,
+    "result": "passed"
+  },
+  "replay_mode": "stored financial facts and legacy parsed PDF pages; no new scan and no LLM; original reports unchanged",
+  "replays": [
+    {
+      "task_id": "ab0186bbe2e2",
+      "name": "中芯国际",
+      "facts": 726,
+      "parsed_docs": 25,
+      "rules": 60,
+      "rule_seconds": 0.251,
+      "coverage": {
+        "applicable": 44,
+        "evaluated": 32,
+        "insufficient": 12,
+        "not_applicable": 16,
+        "unsupported": 0,
+        "completeness": 0.7273,
+        "capability_completeness": 0.7273,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 17,
+            "已判断": 13,
+            "数据不足": 1,
+            "不适用": 3,
+            "数据源暂不支持": 0
+          },
+          "偿债能力": {
+            "总数": 18,
+            "已判断": 4,
+            "数据不足": 6,
+            "不适用": 8,
+            "数据源暂不支持": 0
+          },
+          "公司治理": {
+            "总数": 8,
+            "已判断": 6,
+            "数据不足": 2,
+            "不适用": 0,
+            "数据源暂不支持": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0,
+            "数据源暂不支持": 0
+          },
+          "经营行业": {
+            "总数": 12,
+            "已判断": 4,
+            "数据不足": 3,
+            "不适用": 5,
+            "数据源暂不支持": 0
+          }
+        }
+      }
+    },
+    {
+      "task_id": "3c20e57613ba",
+      "name": "西部水泥",
+      "facts": 588,
+      "parsed_docs": 25,
+      "rules": 60,
+      "rule_seconds": 0.321,
+      "coverage": {
+        "applicable": 44,
+        "evaluated": 27,
+        "insufficient": 17,
+        "not_applicable": 16,
+        "unsupported": 0,
+        "completeness": 0.6136,
+        "capability_completeness": 0.6136,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 17,
+            "已判断": 9,
+            "数据不足": 5,
+            "不适用": 3,
+            "数据源暂不支持": 0
+          },
+          "偿债能力": {
+            "总数": 18,
+            "已判断": 7,
+            "数据不足": 3,
+            "不适用": 8,
+            "数据源暂不支持": 0
+          },
+          "公司治理": {
+            "总数": 8,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 0,
+            "数据源暂不支持": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0,
+            "数据源暂不支持": 0
+          },
+          "经营行业": {
+            "总数": 12,
+            "已判断": 1,
+            "数据不足": 6,
+            "不适用": 5,
+            "数据源暂不支持": 0
+          }
+        }
+      }
+    },
+    {
+      "task_id": "cbc97d5fc1d7",
+      "name": "碧桂园服务",
+      "facts": 618,
+      "parsed_docs": 25,
+      "rules": 60,
+      "rule_seconds": 0.207,
+      "coverage": {
+        "applicable": 47,
+        "evaluated": 14,
+        "insufficient": 33,
+        "not_applicable": 13,
+        "unsupported": 0,
+        "completeness": 0.2979,
+        "capability_completeness": 0.2979,
+        "by_dimension": {
+          "财务质量": {
+            "总数": 17,
+            "已判断": 2,
+            "数据不足": 12,
+            "不适用": 3,
+            "数据源暂不支持": 0
+          },
+          "偿债能力": {
+            "总数": 18,
+            "已判断": 1,
+            "数据不足": 10,
+            "不适用": 7,
+            "数据源暂不支持": 0
+          },
+          "公司治理": {
+            "总数": 8,
+            "已判断": 5,
+            "数据不足": 3,
+            "不适用": 0,
+            "数据源暂不支持": 0
+          },
+          "监管法律": {
+            "总数": 5,
+            "已判断": 5,
+            "数据不足": 0,
+            "不适用": 0,
+            "数据源暂不支持": 0
+          },
+          "经营行业": {
+            "总数": 12,
+            "已判断": 1,
+            "数据不足": 8,
+            "不适用": 3,
+            "数据源暂不支持": 0
+          }
+        }
+      }
+    }
+  ],
+  "live_source_smoke": [
+    {
+      "market": "A",
+      "report": "RPT_DMSK_FN_BALANCE",
+      "code": "600519.SH",
+      "rows": 10,
+      "mapped_facts": 80,
+      "raw_references": 1,
+      "raw_present": true,
+      "seconds": 0.13
+    },
+    {
+      "market": "HK",
+      "report": "RPT_HKF10_FN_BALANCE_PC",
+      "code": "00700.HK",
+      "rows": 10,
+      "mapped_facts": 1,
+      "raw_references": 1,
+      "raw_present": true,
+      "seconds": 0.53
+    }
+  ],
+  "browser": {
+    "desktop": "three HTML reports opened; no console errors observed",
+    "scope": "final acceptance targets PC only per user request"
+  },
+  "limitations": [
+    "No full fresh network+LLM scan in this acceptance",
+    "Historical API Raw responses missing cannot be recreated",
+    "Six industry checks support explicit adverse disclosures only; full regulatory ratio feeds remain unavailable",
+    "No automatic complete tabular extraction of receivable ageing, capitalisation or concentration amounts; no statistical backtest"
+  ],
+  "commands": [
+    "python tests/run_tests.py",
+    "python -m unittest discover -s tests -p 'test_*.py' -v",
+    "python scripts/replay_rules.py ab0186bbe2e2 3c20e57613ba cbc97d5fc1d7"
+  ],
+  "service": {
+    "port": 8770,
+    "restart": "graceful after confirming no queued or running tasks",
+    "database_backup": "data/backups/pre-v13.db",
+    "database_migration": "raw_ref additive column",
+    "health": "HTTP 200",
+    "legacy_report": "HTTP 200"
+  }
+}

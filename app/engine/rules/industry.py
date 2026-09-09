@@ -69,14 +69,13 @@ def _bk02(ctx: RuleContext):
 
 
 def _bk03(ctx: RuleContext):
-    return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
-            "不良贷款率与拨备覆盖率未包含在当前数据源的结构化字段中",
-            "")
+    from app.engine.rules.extended import text_check
+    return text_check(ctx, "BK03")
 
 
 def _bk04(ctx: RuleContext):
-    return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
-            "资本充足率未包含在当前数据源的结构化字段中，需接入监管报表或年报附注后判断", "")
+    from app.engine.rules.extended import text_check
+    return text_check(ctx, "BK04")
 
 
 def build_bank_rules() -> list[Rule]:
@@ -121,13 +120,13 @@ def _in02(ctx: RuleContext):
 
 
 def _in03(ctx: RuleContext):
-    return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
-            "偿付能力充足率未包含在当前数据源的结构化字段中", "")
+    from app.engine.rules.extended import text_check
+    return text_check(ctx, "IN03")
 
 
 def _in04(ctx: RuleContext):
-    return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
-            "保险准备金充足性需读取年报精算与准备金章节，本次未做全文精读", "")
+    from app.engine.rules.extended import text_check
+    return text_check(ctx, "IN04")
 
 
 def build_insurance_rules() -> list[Rule]:
@@ -172,13 +171,13 @@ def _br02(ctx: RuleContext):
 
 
 def _br03(ctx: RuleContext):
-    return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
-            "净资本、风险资本准备等券商监管指标未包含在当前数据源中", "")
+    from app.engine.rules.extended import text_check
+    return text_check(ctx, "BR03")
 
 
 def _br04(ctx: RuleContext):
-    return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
-            "信用业务（两融、股票质押）规模与风险未包含在当前数据源中", "")
+    from app.engine.rules.extended import text_check
+    return text_check(ctx, "BR04")
 
 
 def build_broker_rules() -> list[Rule]:
@@ -264,25 +263,23 @@ def _re03(ctx: RuleContext):
 
 
 def _re04(ctx: RuleContext):
-    advance = ctx.current_fact("advance_receivables")
-    if advance is None:
+    # Prefer the same item on both dates; never compare annual and interim balances as a growth signal.
+    item = next((k for k in ("contract_liabilities", "advance_receivables") if ctx.current_fact(k) is not None), "")
+    current = ctx.current_fact(item) if item else None
+    prior = ctx.facts.get(item, ctx.metrics.prior_period) if current else None
+    ctx.workpapers["RE04"] = {"item": item, "inputs": [f.to_dict() for f in (current, prior) if f],
+                               "formula": "same-item current / prior-year comparable balance - 1"}
+    if not current or not prior or prior.value is None or prior.value <= 0 or current.value is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
-                "未获取到预收款项/合同负债科目，无法判断销售回款前瞻", "")
-    series = ctx.facts.series("advance_receivables", limit=3)
-    if len(series) >= 2:
-        latest_v, prev_v = series[0].value, series[1].value
-        if prev_v and latest_v is not None:
-            change = (latest_v - prev_v) / abs(prev_v)
-            finding = (
-                f"预收款项 {fmoney(latest_v)}（{series[0].label}），"
-                f"较上期 {fmoney(prev_v)} 变动 {fnum(change)}"
-            )
-            if change < -0.30:
-                return (RuleStatus.WATCH, Severity.MEDIUM, finding,
-                        "预收款项（合同负债）大幅下降，通常反映销售回款放缓，是地产现金流的前瞻指标")
-            return (RuleStatus.NORMAL, Severity.LOW, finding, "预收款项未出现大幅下滑")
-    return (RuleStatus.NORMAL, Severity.LOW,
-            f"预收款项 {fmoney(advance.value)}（{advance.period_end[:4]}年）", "")
+                "缺少同科目、可比同期的合同负债/预收款项", "单期规模不能判断销售回款变化")
+    if (current.currency, current.unit, current.period_type, current.consolidated) != (prior.currency, prior.unit, prior.period_type, prior.consolidated):
+        return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, "合同负债/预收款项的币种或期间口径不一致", "不混合比较")
+    change = (current.value - prior.value) / prior.value
+    ctx.workpapers["RE04"]["change"] = change
+    finding = f"{'合同负债' if item == 'contract_liabilities' else '预收款项'} {fmoney(current.value)}，同比 {fnum(change)}"
+    return (RuleStatus.WATCH if change < -.30 else RuleStatus.NORMAL,
+            Severity.MEDIUM if change < -.30 else Severity.LOW, finding,
+            "下降超过 30% 时提示关注；需区分收入结转与新增销售回款变化，不能直接判定销售恶化")
 
 
 def build_realestate_rules() -> list[Rule]:

@@ -247,6 +247,8 @@ section{scroll-margin-top:16px}
       </div>
     </div>
   </div>
+  {% if risk_score.deduplicated %}<p class="score-note">同类重叠检查按最高扣分计入，全部检查结论仍保留。{% for item in risk_score.merged %}{{ item.family }}：{{ item.members|join('、') }} 合并计入 {{ item.kept }}（−{{ item.deduction }}）。{% endfor %}</p>{% endif %}
+  {% if coverage.get('capability_completeness') is not none %}<p class="hint">包含暂不支持项目的整体检查覆盖率：{{ (coverage.capability_completeness * 100)|round(1) }}%。有效覆盖率不包含尚未接通的数据能力，两者应结合查看。</p>{% endif %}
   <p class="score-note">风险信号密度为检查项扣分加权汇总，仅反映已覆盖资料的信号密集程度，不代表公司评级、投资价值或违约概率。</p>
 
   <p class="hint">适用检查 {{ coverage.applicable }} 项，已形成判断 {{ coverage.evaluated }} 项，
@@ -443,6 +445,9 @@ section{scroll-margin-top:16px}
     <ul>{% for item in missing_data %}<li>{{ item.rule_id }} {{ item.name }}：{{ item.reason }}</li>{% endfor %}</ul></details>{% endif %}
   {% if unsupported_data %}<details><summary>数据源暂不支持的检查（{{ unsupported_data|length }} 项，未计入有效检查）</summary>
     <ul>{% for item in unsupported_data %}<li>{{ item.rule_id }} {{ item.name }}：{{ item.reason }}</li>{% endfor %}</ul></details>{% endif %}
+  {% if payload.get('rule_workpapers') %}<details><summary>规则审核底稿（输入、公式、原文与排除记录）</summary>
+    {% for rid, paper in payload.rule_workpapers.items() %}<details><summary>{{ rid }} 的判断依据</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px">{{ paper|tojson(indent=2) }}</pre></details>{% endfor %}
+  </details>{% endif %}
   {% if notes %}<details><summary>计算口径说明</summary><ul>{% for note in notes %}<li>{{ note }}</li>{% endfor %}</ul></details>{% endif %}
   {% if ai.notes or ai.usage.failures or ai.verification %}<details><summary>AI 执行与核验详情</summary>
     <ul>{% for note in ai.notes %}<li>{{ note }}</li>{% endfor %}

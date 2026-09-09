@@ -50,7 +50,7 @@ GRADE_BANDS = [
 ]
 
 
-def risk_signal_score(dimensions: list[dict[str, Any]]) -> dict[str, Any]:
+def risk_signal_score(dimensions: list[dict[str, Any]], *, deduplicate: bool = False) -> dict[str, Any]:
     """从维度检查结果加权计算风险信号评分。
 
     基础分 100，按检查项结论与严重度扣分，下限 0。
@@ -60,19 +60,19 @@ def risk_signal_score(dimensions: list[dict[str, Any]]) -> dict[str, Any]:
     watch_counts = {"中": 0, "低": 0, "未定": 0}
     risk_deduction = 0
     watch_deduction = 0
-    for dim in dimensions or []:
-        for r in dim.get("results") or []:
-            status = r.get("status")
-            sev = r.get("severity")
-            if status == "发现风险":
-                points = RISK_DEDUCTION.get(sev, RISK_DEFAULT_DEDUCTION)
-                risk_counts[sev if sev in RISK_DEDUCTION else "未定"] += 1
-                risk_deduction += points
-            elif status == "需要关注":
-                points = WATCH_DEDUCTION.get(sev, WATCH_DEFAULT_DEDUCTION)
-                watch_counts[sev if sev in WATCH_DEDUCTION else "未定"] += 1
-                watch_deduction += points
-
+    from app.report.scoring import select_scored_results
+    results, merged = select_scored_results(dimensions, deduplicate)
+    for r in results:
+        status = r.get("status")
+        sev = r.get("severity")
+        if status == "发现风险":
+            points = RISK_DEDUCTION.get(sev, RISK_DEFAULT_DEDUCTION)
+            risk_counts[sev if sev in RISK_DEDUCTION else "未定"] += 1
+            risk_deduction += points
+        elif status == "需要关注":
+            points = WATCH_DEDUCTION.get(sev, WATCH_DEFAULT_DEDUCTION)
+            watch_counts[sev if sev in WATCH_DEDUCTION else "未定"] += 1
+            watch_deduction += points
     score = max(0, 100 - risk_deduction - watch_deduction)
     for threshold, grade, label in GRADE_BANDS:
         if score >= threshold:
@@ -90,6 +90,8 @@ def risk_signal_score(dimensions: list[dict[str, Any]]) -> dict[str, Any]:
     watch_comp = _comp(watch_counts, WATCH_DEDUCTION, WATCH_DEFAULT_DEDUCTION, ["中", "低", "未定"])
     return {
         "score": score,
+        "merged": merged,
+        "deduplicated": deduplicate,
         "grade": grade,
         "label": label,
         "risk_deduction": risk_deduction,
@@ -118,13 +120,16 @@ _dimension_desc = {
 
 
 def _env() -> Environment:
-    return Environment(
+    env = Environment(
         loader=FileSystemLoader(str(TEMPLATE_DIR)),
         undefined=StrictUndefined,
         autoescape=select_autoescape(["html", "j2"]),
         trim_blocks=True,
         lstrip_blocks=True,
     )
+
+    env.policies["json.dumps_kwargs"] = {"sort_keys": True, "ensure_ascii": False}
+    return env
 
 
 def safe_url(url: str) -> str:
@@ -189,7 +194,7 @@ def build_context(payload: dict[str, Any]) -> dict[str, Any]:
     summary = payload.get("summary") or {}
     coverage = summary.get("coverage") or {}
     dimensions = payload.get("dimensions") or []
-    risk_score = risk_signal_score(dimensions)
+    risk_score = risk_signal_score(dimensions, deduplicate=payload.get("scoring_version") == "2")
     evaluated = sum(r.get("status") in {"发现风险", "需要关注", "已覆盖资料中未发现明显异常"}
                     for dim in dimensions for r in dim.get("results") or [])
     if coverage.get("evaluated", evaluated) == 0 or evaluated == 0:

@@ -61,8 +61,8 @@ class RuleCapabilityMarkingTests(unittest.TestCase):
         unsupported = [r for r in reg.rules
                        if r.capability == Capability.UNSUPPORTED_SOURCE.value]
         self.assertEqual(len(unsupported), 6)
-        # 规则总数不变：能力状态是标注，不是新增规则。
-        self.assertEqual(len(reg.rules), 52)
+        # V1.3 新增八项通用检查，保留六项监管数据能力标注。
+        self.assertEqual(len(reg.rules), 60)
 
 
 class CoverageDenominatorTests(unittest.TestCase):
@@ -71,7 +71,7 @@ class CoverageDenominatorTests(unittest.TestCase):
         cov = out.coverage
         self.assertEqual(cov.unsupported, 2, "银行包应有 2 项数据源暂不支持")
         # 覆盖率分母：适用 + 不适用 + 暂不支持 == 全部规则
-        self.assertEqual(cov.applicable + cov.not_applicable + cov.unsupported, 52)
+        self.assertEqual(cov.applicable + cov.not_applicable + cov.unsupported, 60)
         # 已判断 + 数据不足 == 适用（暂不支持已排除在适用之外）
         self.assertEqual(cov.evaluated + cov.insufficient, cov.applicable)
         # BK03/BK04 不再进入数据不足计数
@@ -85,7 +85,7 @@ class CoverageDenominatorTests(unittest.TestCase):
         # 普通行业：银行/保险/券商规则为「不适用」，不是「数据源暂不支持」。
         out = run_rules(_context("general"), build_registry())
         self.assertEqual(out.coverage.unsupported, 0)
-        self.assertEqual(out.coverage.applicable + out.coverage.not_applicable, 52)
+        self.assertEqual(out.coverage.applicable + out.coverage.not_applicable, 60)
 
     def test_insurance_broker_unsupported_count(self):
         for pack, expected in (("insurance", 2), ("broker", 2), ("realestate", 0)):

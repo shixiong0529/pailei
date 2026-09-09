@@ -236,6 +236,8 @@ def _hk_date(raw: str) -> str:
 
 def _classify_hk(title: str, short_text: str) -> str:
     text = f"{title} {short_text}"
+    if "證券變動月報表" in text or "证券变动月报表" in text:
+        return "月报表"
     for key, label in [("盈利警告", "盈利警告"), ("溢利警告", "盈利警告"),
                        ("解除凍結", "冻结解除"), ("解除質押", "质押解除"),
                        ("更正", "财务更正"), ("追溯調整", "财务更正")]:

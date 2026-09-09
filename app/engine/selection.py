@@ -49,6 +49,8 @@ def select_documents(
     - 总数不超过 max_total。
     """
     reasons: list[str] = []
+    if max_total <= 0:
+        return [], reasons
 
     def by_date(seq: list[DisclosureDoc]) -> list[DisclosureDoc]:
         return sorted(seq, key=lambda d: d.publish_date, reverse=True)
@@ -56,10 +58,20 @@ def select_documents(
     selected: list[DisclosureDoc] = []
     used: set[str] = set()
 
+    from app.engine.rules.extended import normalized
+    important = [d for d in docs if any(k in normalized(d.title) for k in
+        ("债务逾期", "债务违约", "未能偿还", "未能按期", "资金占用", "违规担保", "内部控制", "内控审计"))]
+    for d in by_date(important)[:min(5, max_total)]:
+        if d.doc_id not in used:
+            selected.append(d)
+            used.add(d.doc_id)
+    if selected:
+        reasons.append(f"优先保留债务、资金占用与内控专项原文 {len(selected)} 份（总下载上限不变）")
+
     # 1. 重要类别配额
     for group, types, quota in GROUP_QUOTAS:
-        members = by_date([d for d in docs if d.doc_type in types])
-        picked = members[:quota]
+        members = by_date([d for d in docs if d.doc_type in types and d.doc_id not in used])
+        picked = members[:min(quota, max(0, max_total - len(selected)))]
         if members and len(members) > quota:
             reasons.append(f"「{group}」共 {len(members)} 份，按配额选择 {quota} 份")
         selected.extend(picked)
@@ -67,7 +79,7 @@ def select_documents(
 
     # 2. 非例行公告按优先级补齐
     non_routine = [d for d in docs if d.doc_id not in used and d.doc_type not in ROUTINE_TYPES]
-    non_routine.sort(key=lambda d: (_priority(d), d.publish_date))
+    non_routine = sorted(by_date(non_routine), key=_priority)
     for d in non_routine:
         if len(selected) >= max_total:
             break

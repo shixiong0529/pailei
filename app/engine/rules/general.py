@@ -269,8 +269,16 @@ def _r_fq11(ctx: RuleContext):
 
 def _r_fq12(ctx: RuleContext):
     """财务重述 / 追溯调整：以公告为准，不依赖财务指标。"""
-    hits = ctx.evidence.has_any(["更正", "追溯", "差错"])
-    docs = ctx.docs_of_type("财务更正")
+    from app.engine.rules.extended import normalized
+    candidates = ctx.docs_of_type("财务更正")
+    routine = [d for d in candidates if any(k in normalized(d.title) for k in
+               ("证券变动月报表", "月报表", "代表委任表格", "股东大会通知", "董事会会议通知"))]
+    docs = [d for d in candidates if d not in routine and any(k in normalized(d.title) for k in
+            ("财务", "会计", "年报", "年度报告", "季度报告", "中期报告", "半年报", "审计", "追溯调整"))]
+    unknown = [d for d in candidates if d not in routine and d not in docs]
+    ctx.workpapers["FQ12"] = {"financial_corrections": [d.doc_id for d in docs],
+                               "excluded_routine": [d.doc_id for d in routine],
+                               "undetermined": [d.doc_id for d in unknown]}
     if docs:
         titles = "、".join(d.title for d in docs[:3])
         return (
@@ -278,6 +286,9 @@ def _r_fq12(ctx: RuleContext):
             f"检索到 {len(docs)} 份财务更正/追溯调整类公告：{titles}",
             "财务重述意味着此前披露的财务数据不再可靠，需核实更正范围与原因",
         )
+    if unknown:
+        return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
+                "存在更正公告，但标题不足以判断是否涉及财务重述", "需核实正文，更正公告不直接等于财务差错")
     if ctx.docs:
         return (
             RuleStatus.NORMAL, Severity.LOW,
@@ -556,7 +567,7 @@ def _r_gv06(ctx: RuleContext):
     return (
         RuleStatus.NORMAL, Severity.LOW,
         f"实际控制人：{controller}；董事长：{ctx.security.profile.get('chairman') or '未获取'}",
-        "",
+        "本项仅核对控制人信息是否披露，不代表已评价治理有效性；资金占用和内控缺陷另见 GV07、GV08",
     )
 
 
@@ -647,19 +658,50 @@ def _r_rg05(ctx: RuleContext):
 
 
 def _r_op01(ctx: RuleContext):
+    from app.engine.rules.extended import normalized
+    import re
+
     docs = ctx.docs_of_type("盈利警告", "业绩预告")
-    if docs:
-        return (
-            RuleStatus.WATCH, Severity.MEDIUM,
-            f"检索到 {len(docs)} 份盈利警告或业绩预告：" + "、".join(d.title for d in docs[:3]),
-            "公司主动发布的盈利预警是经营恶化的直接信号，需核实原因与是否持续",
-        )
-    if ctx.docs:
-        return (
-            RuleStatus.NORMAL, Severity.LOW,
-            f"已获取 {len(ctx.docs)} 份公告，未发现盈利警告或业绩预告类文件", "",
-        )
-    return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, "未获取到公告清单，无法判断业绩预警情况", "")
+    if not docs:
+        return (RuleStatus.NORMAL if ctx.docs else RuleStatus.INSUFFICIENT,
+                Severity.LOW if ctx.docs else Severity.UNKNOWN,
+                "已获取公告中未发现业绩预告或盈利警告" if ctx.docs else "未获取公告清单", "")
+    bad, good, unknown = [], [], []
+    for d in docs:
+        title = normalized(d.title)
+        p = ctx.parsed.get(d.doc_id)
+        # Prefer explicit direction in the title; never scan all historical text for '亏损'.
+        if any(w in title for w in ("预亏", "续亏", "首亏", "预减", "盈利警告", "溢利警告")):
+            bad.append(d)
+        elif any(w in title for w in ("预增", "扭亏", "盈利喜报", "正面盈利预告")):
+            good.append(d)
+        elif p and not p.error:
+            direction = []
+            for page, text in p.pages:
+                for part in re.finditer(r"[^。；;！？!?]+[。；;！？!?]?", text):
+                    quote = part.group().strip()
+                    n = normalized(quote)
+                    if len(quote) > 850 or not re.search(r"预计|预期", n) or not re.search(r"本期|报告期|本年度|本公司|本集团", n):
+                        continue
+                    if re.search(r"预计.{0,20}(?:亏损|下降|减少)|预期.{0,20}(?:亏损|下降|减少)", n) and not re.search(r"不(?:会|再)|并非|是否|可能", n):
+                        direction.append("bad")
+                        ctx.pending_evidence.append((d, quote, f"第 {page} 页", ["业绩预警"]))
+                    elif re.search(r"预计.{0,20}(?:增长|增加|扭亏)|预期.{0,20}(?:增长|增加|扭亏)", n):
+                        direction.append("good")
+            (bad if "bad" in direction else good if "good" in direction else unknown).append(d)
+        else:
+            unknown.append(d)
+    ctx.workpapers["OP01"] = {"negative_documents": [d.doc_id for d in bad],
+                               "positive_documents": [d.doc_id for d in good],
+                               "undetermined_documents": [d.doc_id for d in unknown]}
+    if bad:
+        return (RuleStatus.WATCH, Severity.MEDIUM,
+                "检索到负面业绩预告：" + "、".join(d.title for d in bad[:3]),
+                "已区分预增与预减/预亏；需核实报告期及后续正式财报，预告不是已审计结果")
+    if unknown:
+        return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
+                f"存在 {len(unknown)} 份方向未核实的业绩预告", "缺少明确方向或正文，不把所有业绩预告都视为利空")
+    return (RuleStatus.NORMAL, Severity.LOW, f"已识别 {len(good)} 份预增或扭亏预告，未触发负面预警", "仅评价预告方向，不表示盈利质量已获确认")
 
 
 def _r_op02(ctx: RuleContext):

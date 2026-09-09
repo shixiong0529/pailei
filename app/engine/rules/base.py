@@ -24,7 +24,7 @@ from app.engine.metrics import MetricsBundle
 from app.engine.normalize import FactSet
 from app.data.pdftext import ParsedDoc
 
-RULE_VERSION = "1.1"
+RULE_VERSION = "1.3"
 
 
 @dataclass
@@ -104,6 +104,8 @@ class RuleContext:
     pending_evidence: list[tuple[DisclosureDoc, str, str, list[str]]] = field(
         default_factory=list
     )
+
+    workpapers: dict[str, dict] = field(default_factory=dict)
 
     def current_fact(self, item: str):
         fact = self.facts.get(item, self.metrics.latest_period)
@@ -185,8 +187,11 @@ class Rule:
                 to_verify=["检查该指标的数据质量后重试"],
                 capability=self.capability,
             )
+        capability = self.capability
+        if capability == Capability.UNSUPPORTED_SOURCE.value and status in (RuleStatus.RISK, RuleStatus.WATCH) and ctx.workpapers.get(self.rule_id, {}).get("hits"):
+            capability = Capability.ENABLED.value
         return RuleOutcome(rule=self, status=status, severity=severity, finding=finding,
-                           why=why, capability=self.capability)
+                           why=why, capability=capability)
 
     def _missing(self, ctx: RuleContext) -> list[str]:
         missing = []
@@ -218,10 +223,13 @@ class RuleOutcome:
     industry_pack: str = "general"
     capability: str = Capability.ENABLED.value
 
+    workpaper: dict = field(default_factory=dict)
+
     def to_result(self) -> "object":
         from app.core.models import RuleResult
 
         return RuleResult(
+            metric_snapshot=self.workpaper,
             rule_id=self.rule.rule_id,
             name=self.rule.name,
             dimension=self.rule.dimension,

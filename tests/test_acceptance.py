@@ -422,7 +422,7 @@ class AuditChecks(unittest.TestCase):
         with patch("app.engine.pipeline.IdentityResolver.resolve",return_value=self._resolver()),ThreadPoolExecutor(max_workers=5) as pool:
             results=list(pool.map(lambda p:p.run("test"),pipes))
         self.assertTrue(all(r.payload and r.status!=TaskStatus.FAILED for r in results))
-        self.assertTrue(all(len(db.load_rule_results(r.task_id))==52 for r in results))
+        self.assertTrue(all(len(db.load_rule_results(r.task_id))==60 for r in results))
 
     def test_44_db_rollback_works(self):
         try:
@@ -507,7 +507,7 @@ class AuditChecks(unittest.TestCase):
         for pack in ["general","bank","insurance","broker","realestate"]:
             with self.subTest(pack=pack):
                 output=run_rules(context(vals,pack=pack),build_registry())
-                self.assertEqual(len(output.outcomes),52)
+                self.assertEqual(len(output.outcomes),60)
                 by_id={o.rule.rule_id:o for o in output.outcomes}
                 self.assertEqual(by_id["FQ08"].status,RuleStatus.RISK)
                 if pack in ["bank","insurance","broker"]:

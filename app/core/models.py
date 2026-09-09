@@ -170,6 +170,7 @@ class FinancialFact:
     extraction: str = "api"        # api / pdf / derived
     verified: bool = True
     note: str = ""
+    raw_ref: str = ""              # immutable response snapshot; empty for legacy facts
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)

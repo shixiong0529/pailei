@@ -72,6 +72,7 @@ class Coverage:
             "completeness": (
                 round(self.evaluated / self.applicable, 4) if self.applicable else 0.0
             ),
+            "capability_completeness": round(self.evaluated / (self.applicable + self.unsupported), 4) if self.applicable + self.unsupported else 0.0,
             "by_dimension": self.by_dimension,
         }
 
@@ -111,6 +112,8 @@ def build_registry() -> RuleRegistry:
 
     registry = RuleRegistry()
     registry.register_many(build_general_rules())
+    from app.engine.rules.extended import build_extended_rules
+    registry.register_many(build_extended_rules())
     registry.register_many(build_bank_rules())
     registry.register_many(build_insurance_rules())
     registry.register_many(build_broker_rules())
@@ -125,6 +128,7 @@ def attach_evidence(outcome: RuleOutcome, ctx: RuleContext) -> None:
     只有当更精确的一层没有命中时，才退到下一层，避免把无关文件当成证据。
     """
     if outcome.status in (RuleStatus.NORMAL, RuleStatus.NOT_APPLICABLE):
+        ctx.take_pending_evidence()
         return
     ids: list[str] = []
     precise: set[str] = set()
@@ -181,6 +185,12 @@ def run_rules(ctx: RuleContext, registry: RuleRegistry) -> EngineOutput:
     coverage = Coverage()
     for rule in registry.rules:
         outcome = rule.evaluate(ctx)
+        outcome.workpaper = {
+            "rule_version": rule.version,
+            "initial_status": outcome.status.value,
+            "required_metrics": {req[7:]: ctx.metrics.as_dict().get(req[7:]) for req in rule.requires if req.startswith("metric:")},
+            **ctx.workpapers.get(rule.rule_id, {}),
+        }
         outcome.industry_pack = ctx.industry_pack
         attach_evidence(outcome, ctx)
         output.outcomes.append(outcome)

@@ -90,7 +90,7 @@ class TargetChapterTests(unittest.TestCase):
     def test_plan_target_parse_none_when_all_chapters_covered(self):
         pages = [(1, " ".join(kw)) for kw in
                  [("审计报告",), ("持续经营",), ("诉讼",), ("对外担保",),
-                  ("受限资产",), ("关联交易",), ("短期借款",)]]
+                  ("受限资产",), ("关联交易",), ("短期借款",), ("内部控制",), ("账龄",), ("主要客户",)]]
         p = self._parsed(pages, 300, True)
         self.assertIsNone(plan_target_parse(p, max_pages=120, extra_pages=60))
 

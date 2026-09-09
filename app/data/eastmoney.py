@@ -50,6 +50,11 @@ A_BALANCE_MAP: dict[str, str] = {
     "ADVANCE_RECEIVABLES": "advance_receivables",
     "PREPAYMENT": "prepayments",
     "GOODWILL": "goodwill",
+    "NONCURRENT_LIAB_1YEAR": "current_noncurrent_liabilities",
+    "BOND_PAYABLE": "bonds_payable",
+    "LEASE_LIAB": "lease_liabilities",
+    "CONTRACT_ASSET": "contract_assets",
+    "CIP": "construction_in_progress",
     # 银行 / 券商 / 保险专用
     "CASH_DEPOSIT_PBC": "bank_cash_deposit_pbc",
     "LOAN_ADVANCE": "bank_loan_advance",
@@ -245,9 +250,14 @@ class EastmoneyClient:
                 params["sortColumns"] = sort
                 params["sortTypes"] = -1 if desc else 1
             data = self.client.get_json(BASE, params=params, stage=stage)
+            from app.data.provenance import preserve_response
+            try:
+                raw_ref = preserve_response(data, url=BASE, params=params)
+            except (OSError, ValueError, TypeError) as exc:
+                raise FetchError("无法保存原始财务响应，停止使用不可追溯的数据", url=BASE, stage=stage) from exc
             result = (data or {}).get("result") or {}
             chunk = result.get("data") or []
-            rows.extend(chunk)
+            rows.extend({**row, "_raw_ref": raw_ref} for row in chunk)
             pages = result.get("pages") or 1
             if page >= pages or not chunk:
                 break
@@ -327,7 +337,8 @@ class EastmoneyClient:
                     FinancialFact(
                         secucode=secucode,
                         statement=Statement.INDICATOR,
-                        raw_item=src,
+                        raw_ref=str(row.get("_raw_ref") or ""),
+                raw_item=src,
                         std_item=std,
                         value=value,
                         unit="比率" if std in percent_items else "元",
@@ -414,7 +425,8 @@ class EastmoneyClient:
                     FinancialFact(
                         secucode=secucode,
                         statement=Statement.INDICATOR,
-                        raw_item=src,
+                        raw_ref=str(row.get("_raw_ref") or ""),
+                raw_item=src,
                         std_item=std,
                         value=value,
                         unit=("天" if std in {"ar_days", "inventory_days"} else "倍" if std == "current_ratio"
@@ -495,6 +507,7 @@ def _a_rows_to_facts(
             FinancialFact(
                 secucode=str(row.get("SECUCODE") or ""),
                 statement=statement,
+                raw_ref=str(row.get("_raw_ref") or ""),
                 raw_item=src,
                 std_item=std,
                 value=value,
@@ -538,6 +551,7 @@ def _hk_rows_to_facts(
             FinancialFact(
                 secucode=secucode,
                 statement=statement,
+                raw_ref=str(row.get("_raw_ref") or ""),
                 raw_item=raw_name,
                 std_item=std,
                 value=value,

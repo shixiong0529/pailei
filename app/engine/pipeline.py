@@ -894,6 +894,7 @@ class ScanPipeline:
                     "ai_interpreted": o.ai_interpreted,
                     "industry_pack": o.industry_pack,
                     "capability": o.capability,
+                    "workpaper": o.workpaper,
                 }
             )
 
@@ -901,7 +902,10 @@ class ScanPipeline:
         trends = self._build_trends(facts)
 
         payload: dict[str, Any] = {
-            "report_version": "1.2",
+            "report_version": "1.3",
+            "scoring_version": "2",
+            "raw_snapshot_refs": sorted({f.raw_ref for f in facts.facts if f.raw_ref}),
+            "rule_workpapers": {o.rule.rule_id: o.workpaper for o in output.outcomes if o.workpaper},
             "rule_version": RULE_VERSION,
             "task_id": self.task_id,
             "generated_at": now_iso(),
