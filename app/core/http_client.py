@@ -93,6 +93,28 @@ _PRIVATE_NETS = [
 
 ALLOWED_SCHEMES = {"http", "https"}
 
+# Some macOS network proxies resolve public sites to documentation-range
+# addresses before routing them through a local tunnel.  Only the project's
+# fixed data-source hosts may use these proxy addresses; arbitrary URLs and
+# direct IP literals must still pass the public-address check below.
+_DATA_SOURCE_HOSTS = frozenset({
+    "searchapi.eastmoney.com",
+    "datacenter-web.eastmoney.com",
+    "www.cninfo.com.cn",
+    "static.cninfo.com.cn",
+    "www1.hkexnews.hk",
+})
+_PROXY_FAKE_NETS = (
+    ipaddress.ip_network("198.18.0.0/15"),
+    ipaddress.ip_network("2001:2::/48"),
+)
+
+
+def _trusted_proxy_address(host: str, address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    return host.lower().rstrip(".") in _DATA_SOURCE_HOSTS and any(
+        address in network for network in _PROXY_FAKE_NETS
+    )
+
 
 def assert_safe_url(url: str, *, timeout: float | None = None) -> str:
     """校验 URL 合法性，默认阻断内网与非法协议。"""
@@ -149,7 +171,9 @@ def _public_addresses(host: str, timeout: float | None = None) -> list[str]:
     for address in addresses:
         ip = ipaddress.ip_address(address.split("%")[0])
         ip = ip.ipv4_mapped if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped else ip
-        if not settings.allow_private_address and (not ip.is_global or ip.is_multicast or ip.is_reserved):
+        if (not settings.allow_private_address
+                and (not ip.is_global or ip.is_multicast or ip.is_reserved)
+                and not _trusted_proxy_address(host, ip)):
             raise FetchError(f"拒绝访问非公网地址: {host}", stage="guard")
     return addresses
 

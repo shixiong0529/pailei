@@ -21,7 +21,7 @@ from app.core.http_client import HttpClient, FetchError, FetchRecord, PublicNetw
 from app.core.models import *
 from app.data.identity import IdentityResolver, _sec_market
 from app.data.cninfo import CninfoClient
-from app.data.eastmoney import _period_start, _hk_rows_to_facts, HK_BALANCE_MAP, _num
+from app.data.eastmoney import EastmoneyClient, _period_start, _hk_rows_to_facts, HK_BALANCE_MAP, _num
 from app.data.pdftext import ParsedDoc, parse_pdf, verify_evidence
 from app.engine.currency import verify_reporting_currencies
 from app.engine.metrics import compute_metrics
@@ -214,6 +214,47 @@ class HardeningTests(unittest.TestCase):
         with patch('app.core.http_client.socket.getaddrinfo',return_value=[(socket.AF_INET,1,6,'',('93.184.216.34',80))]),patch.object(httpcore.SyncBackend,'connect_tcp',return_value=Mock()) as connect:
             PublicNetworkBackend().connect_tcp('public.test',443,timeout=1)
         self.assertEqual(connect.call_args.args[0],'93.184.216.34')
+
+    def test_known_data_source_works_with_local_proxy_fake_dns(self):
+        from app.core.http_client import assert_safe_url
+        for address in ('198.18.0.89','2001:2::59'):
+            family = socket.AF_INET6 if ':' in address else socket.AF_INET
+            with self.subTest(address=address), patch('app.core.http_client.socket.getaddrinfo',return_value=[(family,1,6,'',(address,443))]),patch.object(httpcore.SyncBackend,'connect_tcp',return_value=Mock()) as connect:
+                assert_safe_url('https://searchapi.eastmoney.com/api/suggest/get')
+                PublicNetworkBackend().connect_tcp('searchapi.eastmoney.com',443,timeout=1)
+                self.assertEqual(connect.call_args.args[0],address)
+
+    def test_proxy_fake_dns_does_not_open_arbitrary_or_private_urls(self):
+        from app.core.http_client import assert_safe_url
+        for address in ('198.18.0.89','2001:2::59','127.0.0.1','10.0.0.2'):
+            family = socket.AF_INET6 if ':' in address else socket.AF_INET
+            with self.subTest(address=address), patch('app.core.http_client.socket.getaddrinfo',return_value=[(family,1,6,'',(address,443))]):
+                with self.assertRaises(FetchError):assert_safe_url('https://unrelated.example.test/data')
+                if address in ('127.0.0.1','10.0.0.2'):
+                    with self.assertRaises(FetchError):assert_safe_url('https://searchapi.eastmoney.com/api/suggest/get')
+        for literal in ('http://198.18.0.89/','http://[2001:2::59]/'):
+            with self.assertRaises(FetchError):assert_safe_url(literal)
+
+    def test_search_outage_is_not_reported_as_unknown_security(self):
+        em=Mock(spec=EastmoneyClient)
+        em.search.return_value=[]
+        em.last_search_error='拒绝访问非公网地址'
+        with IdentityResolver(em) as resolver: failed=resolver.resolve('600519')
+        self.assertFalse(failed.ok);self.assertIn('数据源暂时不可用',failed.message)
+        em.last_search_error=''
+        with IdentityResolver(em) as resolver: missing=resolver.resolve('不存在的证券')
+        self.assertIn('未找到',missing.message)
+
+    def test_suggest_api_reports_upstream_outage(self):
+        from app.main import app
+        def fail_search(em, keyword, count=12):
+            em.last_search_error='模拟网络故障'
+            return []
+        with patch.object(EastmoneyClient,'search',fail_search), TestClient(app) as client:
+            response=client.get('/api/suggest?q=600519')
+        self.assertEqual(response.status_code,503)
+        self.assertFalse(response.json()['ok'])
+        self.assertIn('数据源暂时不可用',response.json()['message'])
 
     def test_deadline_prevents_transport(self):
         with HttpClient() as c:

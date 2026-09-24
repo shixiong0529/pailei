@@ -85,6 +85,13 @@ q.addEventListener('input', () => {
     if (requestRevision !== revision || q.value.trim() !== v) return;
     items = (r && r.items) || [];
     box.innerHTML = '';
+    if (r && r.ok === false) {
+      const error = document.createElement('div');
+      error.className = 'suggest-item';
+      error.textContent = r.message || '证券搜索暂时不可用，请稍后重试';
+      box.appendChild(error);
+      return;
+    }
     items.forEach((it, i) => {
       const div = document.createElement('div');
       div.className = 'suggest-item';

@@ -177,6 +177,9 @@ def suggest(q: str = Query("", min_length=0)):
         em = EastmoneyClient(client)
         with IdentityResolver(em) as resolver:
             candidates = resolver.search(query, limit=10)
+        if em.last_search_error:
+            return JSONResponse({"ok": False, "items": [],
+                                 "message": "证券搜索数据源暂时不可用，请检查网络后重试"}, status_code=503)
     items = []
     for c in candidates:
         items.append(

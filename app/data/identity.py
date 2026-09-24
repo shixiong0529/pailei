@@ -152,6 +152,8 @@ class IdentityResolver:
 
         candidates = self.search(query)
         if not candidates:
+            if getattr(self.client, "last_search_error", ""):
+                return ResolveResult(ok=False, message="证券搜索数据源暂时不可用，请检查网络后重试；扫描已停止")
             return ResolveResult(ok=False, message=f"未找到与“{query}”匹配的证券，扫描已停止")
 
         # 精确命中代码或名称时优先；否则返回候选让用户确认

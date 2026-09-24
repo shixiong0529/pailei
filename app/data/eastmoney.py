@@ -210,6 +210,7 @@ class EastmoneyClient:
     def __init__(self, client: HttpClient | None = None):
         self.client = client or HttpClient()
         self._owns = client is None
+        self.last_search_error = ""
 
     def close(self) -> None:
         if self._owns:
@@ -450,6 +451,7 @@ class EastmoneyClient:
     # -------------------------------------------------------------- 证券搜索
 
     def search(self, keyword: str, count: int = 12) -> list[dict[str, Any]]:
+        self.last_search_error = ""
         params = {
             "input": keyword,
             "type": "14",
@@ -458,7 +460,8 @@ class EastmoneyClient:
         }
         try:
             data = self.client.get_json(SEARCH, params=params, stage="search")
-        except FetchError:
+        except FetchError as exc:
+            self.last_search_error = str(exc)
             return []
         table = (data or {}).get("QuotationCodeTable") or {}
         return table.get("Data") or []
