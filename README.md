@@ -53,12 +53,69 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8770
 # 4. 打开 http://127.0.0.1:8770
 ```
 
-停止服务：如果服务在当前终端前台运行，按 `Ctrl+C`。如果它在后台运行，可按监听端口找到进程并正常停止：
+### 服务管理（启动 / 停止 / 重启）
+
+#### 方式一：普通方式（通用，任何机器可用）
+
+启动（后台运行，关闭终端后服务不退出）：
 
 ```bash
-PID=$(lsof -tiTCP:8770 -sTCP:LISTEN)
-if [ -n "$PID" ]; then kill "$PID"; fi
+cd ~/Developer/pailei
+nohup .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8770 > data/logs/uvicorn.log 2>&1 &
 ```
+
+前台启动（日志直接打印在终端，适合调试，`Ctrl+C` 停止）：
+
+```bash
+cd ~/Developer/pailei
+.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8770
+```
+
+停止（后台方式；前台运行按 `Ctrl+C`）：
+
+```bash
+pkill -f "uvicorn app.main"
+```
+
+重启（改代码后让新代码生效，连停带启）：
+
+```bash
+pkill -f "uvicorn app.main"; sleep 1
+nohup .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8770 > data/logs/uvicorn.log 2>&1 &
+```
+
+查看是否在运行：
+
+```bash
+lsof -nP -iTCP:8770 | grep LISTEN    # 有输出 = 运行中
+```
+
+#### 方式二：launchd 守护（macOS 可选，常驻 + 开机自启 + 崩溃自动拉起）
+
+写一个 plist（`~/Library/LaunchAgents/local.pailei.web.plist`）由系统托管服务：
+
+```bash
+# 加载守护（执行一次即可，此后开机自动启动、崩溃 5 秒内自动拉起）
+launchctl load -w ~/Library/LaunchAgents/local.pailei.web.plist
+
+# 停止服务（守护模式下 pkill 会被自动拉起，真正停止必须用 bootout）
+launchctl bootout gui/501/local.pailei.web
+
+# 重新启动守护
+launchctl bootstrap gui/501 ~/Library/LaunchAgents/local.pailei.web.plist
+```
+
+守护模式下改代码后的重启：直接 kill 进程，几秒内自动拉起并加载新代码：
+
+```bash
+pkill -f "uvicorn app.main"
+```
+
+plist 模板要点：`ProgramArguments` 为 venv 内 python + `uvicorn app.main:app --host 127.0.0.1 --port 8770`，
+`WorkingDirectory` 指向项目根目录（配置从项目 `.env` 自动读取），`RunAtLoad` + `KeepAlive` 置 true，
+日志指向 `data/logs/launchd-stdout.log` 与 `launchd-stderr.log`。
+
+服务日志位置：守护模式 `data/logs/launchd-*.log`；普通后台方式 `data/logs/uvicorn.log`。
 
 命令行方式（不启动 Web）：
 
