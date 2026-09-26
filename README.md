@@ -111,9 +111,9 @@ launchctl bootstrap gui/501 ~/Library/LaunchAgents/local.pailei.web.plist
 pkill -f "uvicorn app.main"
 ```
 
-plist 模板要点：`ProgramArguments` 为 venv 内 python + `uvicorn app.main:app --host 127.0.0.1 --port 8770`，
-`WorkingDirectory` 指向项目根目录（配置从项目 `.env` 自动读取），`RunAtLoad` + `KeepAlive` 置 true，
-日志指向 `data/logs/launchd-stdout.log` 与 `launchd-stderr.log`。
+plist 模板见仓库 [`deploy/local.pailei.web.plist`](deploy/local.pailei.web.plist)：复制到
+`~/Library/LaunchAgents/local.pailei.web.plist` 后，按本机实际路径修改其中的
+`ProgramArguments`（venv 内 python 绝对路径）、`WorkingDirectory`（项目根目录）和日志路径再加载。
 
 服务日志位置：守护模式 `data/logs/launchd-*.log`；普通后台方式 `data/logs/uvicorn.log`。
 
