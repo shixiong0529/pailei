@@ -860,6 +860,7 @@ class ScanPipeline:
     # ------------------------------------------------------------ 报告数据
 
     def _build_payload(self, **kw: Any) -> dict[str, Any]:
+        from app.core.models import EvidenceStrength
         security = kw["security"]
         facts: FactSet = kw["facts"]
         metrics = kw["metrics"]
@@ -874,11 +875,17 @@ class ScanPipeline:
 
         highest = Severity.UNKNOWN
         for o in output.outcomes:
+            if o.strength is not EvidenceStrength.CONFIRMED or not o.evidence_ids or not all(
+                evidence_store.get(eid) and evidence_store.get(eid).verified for eid in o.evidence_ids
+            ):
+                continue
             if o.status is RuleStatus.RISK and o.severity is Severity.HIGH:
                 highest = Severity.HIGH
                 break
-            if o.status is RuleStatus.RISK and highest is not Severity.HIGH:
+            if o.status is RuleStatus.RISK and o.severity is Severity.MEDIUM and highest is not Severity.HIGH:
                 highest = Severity.MEDIUM
+            elif o.status is RuleStatus.RISK and o.severity is Severity.LOW and highest is Severity.UNKNOWN:
+                highest = Severity.LOW
 
         by_dimension: dict[str, list[dict[str, Any]]] = {}
         for o in output.outcomes:
@@ -907,7 +914,7 @@ class ScanPipeline:
         trends = self._build_trends(facts)
 
         payload: dict[str, Any] = {
-            "report_version": "1.3",
+            "report_version": "1.3.1",
             "scoring_version": "2",
             "raw_snapshot_refs": sorted({f.raw_ref for f in facts.facts if f.raw_ref}),
             "rule_workpapers": {o.rule.rule_id: o.workpaper for o in output.outcomes if o.workpaper},

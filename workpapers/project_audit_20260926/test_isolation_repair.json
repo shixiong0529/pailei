@@ -1,0 +1,32 @@
+{
+  "task_id": "2eac56a1e56c",
+  "backup": "data/raw/project_audit_20260926/orphan_task_rows_v1.json",
+  "removed": {
+    "scan_tasks": 0,
+    "securities": 0,
+    "financial_facts": 741,
+    "documents": 94,
+    "evidences": 77,
+    "rule_results": 0,
+    "risk_events": 0,
+    "reports": 0,
+    "fetch_logs": 38,
+    "llm_usage": 0,
+    "stage_timings": 5
+  },
+  "remaining": {
+    "scan_tasks": 0,
+    "securities": 0,
+    "financial_facts": 0,
+    "documents": 0,
+    "evidences": 0,
+    "rule_results": 0,
+    "risk_events": 0,
+    "reports": 0,
+    "fetch_logs": 0,
+    "llm_usage": 0,
+    "stage_timings": 0
+  },
+  "at": "2026-09-26T11:36:08.430506",
+  "raw_snapshots": "retained; not deleted"
+}

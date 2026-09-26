@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "all_existing_routes_200": true,
+    "missing_task_404": true,
+    "download_matches_online": true,
+    "download_attachment": false,
+    "history_has_task": true,
+    "version_131": true,
+    "synthetic_report": true,
+    "debt_and_control_evidence": true,
+    "model_disabled": true,
+    "no_running_tasks": true
+  },
+  "passed": false,
+  "raw_manifest": "data/raw/project_audit_20260926/web_v1/manifest.json",
+  "task_status": "生成成功",
+  "browser_checked": true
+}

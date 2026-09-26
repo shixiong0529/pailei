@@ -111,17 +111,16 @@ class HkexnewsClient:
                 gaps.append(f"{win_start}~{win_end} 获取失败：{err}")
                 continue
             declared_total = max(declared_total, total)
-            if total > len(rows) and (win_end - win_start).days >= 1:
-                mid = win_start + (win_end - win_start) / 2
-                mid_date = date.fromordinal(int(mid.toordinal()))
-                if mid_date > win_start and mid_date < win_end:
-                    windows.insert(0, (mid_date, win_end))
+            if total > len(rows):
+                if win_start < win_end:
+                    mid_date = win_start + timedelta(days=(win_end - win_start).days // 2)
+                    # Inclusive dates: disjoint windows avoid duplicate boundary-day requests.
+                    windows.insert(0, (mid_date + timedelta(days=1), win_end))
                     windows.insert(0, (win_start, mid_date))
                     continue
-                if total > len(rows):
-                    gaps.append(
-                        f"{win_start}~{win_end} 声明 {total} 条，接口仅返回 {len(rows)} 条且无法再拆分"
-                    )
+                gaps.append(
+                    f"{win_start}~{win_end} 声明 {total} 条，接口仅返回 {len(rows)} 条且无法再拆分"
+                )
             for row in rows:
                 link = row.get("FILE_LINK") or ""
                 news_id = str(row.get("NEWS_ID") or "")
@@ -239,8 +238,18 @@ def _classify_hk(title: str, short_text: str) -> str:
     if "證券變動月報表" in text or "证券变动月报表" in text:
         return "月报表"
     for key, label in [("盈利警告", "盈利警告"), ("溢利警告", "盈利警告"),
-                       ("解除凍結", "冻结解除"), ("解除質押", "质押解除"),
-                       ("更正", "财务更正"), ("追溯調整", "财务更正")]:
+                       ("解除司法凍結", "冻结解除"), ("解除司法冻结", "冻结解除"),
+                       ("解除凍結", "冻结解除"), ("解除冻结", "冻结解除"),
+                       ("解除質押", "质押解除"), ("解除质押", "质押解除"),
+                       ("更正", "财务更正"), ("追溯調整", "财务更正"),
+                       ("追溯调整", "财务更正"),
+                       ("訴訟", "诉讼"), ("诉讼", "诉讼"), ("仲裁", "诉讼"),
+                       ("清盤", "上市地位"), ("清盘", "上市地位"),
+                       ("除牌", "上市地位"), ("停牌", "上市地位"),
+                       ("調查", "监管调查"), ("调查", "监管调查"),
+                       ("處罰", "监管处罚"), ("处罚", "监管处罚"),
+                       ("凍結", "资产冻结"), ("冻结", "资产冻结"),
+                       ("質押", "股权质押"), ("质押", "股权质押")]:
         if key in text:
             return label
     # 先识别例行文件：股东会、董事会会议等常规治理文件不构成风险信号
@@ -262,6 +271,8 @@ def _classify_hk(title: str, short_text: str) -> str:
         if key in text:
             return label
     rules = [
+        ("半年度報告", "半年报"), ("半年度报告", "半年报"),
+        ("中期报告", "半年报"), ("年度报告", "年报"),
         ("年報", "年报"),
         ("年度報告", "年报"),
         ("中期報告", "半年报"),

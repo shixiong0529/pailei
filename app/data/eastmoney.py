@@ -256,10 +256,21 @@ class EastmoneyClient:
                 raw_ref = preserve_response(data, url=BASE, params=params)
             except (OSError, ValueError, TypeError) as exc:
                 raise FetchError("无法保存原始财务响应，停止使用不可追溯的数据", url=BASE, stage=stage) from exc
-            result = (data or {}).get("result") or {}
+            if not isinstance(data, dict) or data.get("success") is False:
+                raise FetchError("财务接口返回业务错误或无效响应，详见 Raw 快照", url=BASE, stage=stage)
+            result = data.get("result")
+            if result is None and data.get("success") is True:
+                break  # 接口明确成功但无命中记录
+            if not isinstance(result, dict):
+                raise FetchError("财务接口 result 结构无效", url=BASE, stage=stage)
             chunk = result.get("data") or []
+            if not isinstance(chunk, list) or not all(isinstance(row, dict) for row in chunk):
+                raise FetchError("财务接口逐笔记录结构无效", url=BASE, stage=stage)
+            try:
+                pages = int(result.get("pages") or 1)
+            except (TypeError, ValueError) as exc:
+                raise FetchError("财务接口分页信息无效", url=BASE, stage=stage) from exc
             rows.extend({**row, "_raw_ref": raw_ref} for row in chunk)
-            pages = result.get("pages") or 1
             if page >= pages or not chunk:
                 break
         return rows

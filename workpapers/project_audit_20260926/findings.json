@@ -1,0 +1,382 @@
+{
+  "version": "1.3.1",
+  "review_date": "2026-09-26",
+  "purpose": "基本面排雷项目缺陷审查与功能决策",
+  "bugs": [
+    {
+      "id": "B01",
+      "title": "未核实、非有限数或非法日期进入计算",
+      "impact": "异常事实可误清除风险，非法日期可中断扫描",
+      "fix": "保留原始事实，排除异常值计算并记入缺口",
+      "files": "app/engine/normalize.py",
+      "tests": [
+        "test_unverified_fact_cannot_clear_a_check",
+        "test_nonfinite_facts_are_not_indexed",
+        "test_invalid_period_does_not_crash_metrics",
+        "test_growth_does_not_produce_nonfinite_result"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B02",
+      "title": "趋势图混合年报、中报及币种",
+      "impact": "趋势和增长展示失真",
+      "fix": "同一期次、币种、单位及累计起点绘图；未知币种不绘金额",
+      "files": "app/engine/normalize.py",
+      "tests": [
+        "test_series_does_not_mix_interim_and_annual",
+        "test_series_does_not_mix_currencies",
+        "test_unknown_currency_not_plotted_as_money"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B03",
+      "title": "非经常损益混用总净利润和归母扣非利润；负分母误报正常",
+      "impact": "FQ06 比例失真或错误安心",
+      "fix": "要求归母同口径；非正归母利润不适用",
+      "files": "app/engine/metrics.py; app/engine/rules/general.py",
+      "tests": [
+        "test_negative_profit_not_cleared_by_nonrecurring_ratio",
+        "test_nonrecurring_does_not_mix_total_and_attributable_profit",
+        "test_nonrecurring_requires_matching_period_start"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B04",
+      "title": "缺失净利润当作零",
+      "impact": "FQ07 错误认定靠非经常项目扭亏",
+      "fix": "缺少净利时只确认扣非亏损关注信号",
+      "files": "app/engine/rules/general.py",
+      "tests": [
+        "test_missing_profit_not_treated_as_reported_profit"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B05",
+      "title": "负现金及受限资金大于货币资金仍能参与偿债判断",
+      "impact": "现金覆盖结果不可信",
+      "fix": "拒绝矛盾现金口径，说明缺口",
+      "files": "app/engine/metrics.py",
+      "tests": [
+        "test_invalid_cash_equivalents_cannot_clear_debt_check",
+        "test_cash_cannot_be_less_than_restricted_cash"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B06",
+      "title": "现金流缺失遮蔽负净资产和审计持续经营信号",
+      "impact": "OP05 漏报",
+      "fix": "负权益和审计信号独立判断；双负判断仍需完整数据",
+      "files": "app/engine/rules/general.py",
+      "tests": [
+        "test_negative_equity_detected_without_cashflow",
+        "test_audit_going_concern_detected_without_financial_data",
+        "test_missing_cashflow_and_positive_profit_not_normal"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B07",
+      "title": "短期借款为零被标成缺数据",
+      "impact": "SV01/RE02 不准确",
+      "fix": "零短期借款标为本项不适用；其他短债由 SV10 处理",
+      "files": "app/engine/rules/general.py; app/engine/rules/industry.py",
+      "tests": [
+        "test_zero_short_borrowings_not_missing_data"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B08",
+      "title": "非正财务费用被解释为无付息压力",
+      "impact": "SV04 不当安心",
+      "fix": "代理分母非正标为不适用，明确不能排除实际利息压力",
+      "files": "app/engine/rules/general.py",
+      "tests": [
+        "test_net_finance_income_not_proof_of_no_interest_pressure"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B09",
+      "title": "已映射银行存贷比未进入指标包",
+      "impact": "BK01 无法使用现成数据",
+      "fix": "接通存贷比、加权 ROE 指标透传",
+      "files": "app/engine/metrics.py",
+      "tests": [
+        "test_bank_source_indicator_reaches_bank_rule"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B10",
+      "title": "财务接口业务失败或结构异常变成空成功",
+      "impact": "漏数据且缺少真实原因",
+      "fix": "保存响应后验证 success/result/data/pages，明确 FetchError",
+      "files": "app/data/eastmoney.py",
+      "tests": [
+        "test_business_error_is_not_a_successful_empty_financial_response",
+        "test_malformed_financial_response_is_reported"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B11",
+      "title": "报告标题遮蔽处罚诉讼，港股半年报误分类及简体风险漏分类",
+      "impact": "公告检查漏报",
+      "fix": "风险分类优先，完善期次及简繁标题识别",
+      "files": "app/data/cninfo.py; app/data/hkexnews.py",
+      "tests": [
+        "test_a_share_risk_title_wins_over_report_carrier",
+        "test_hk_risk_title_wins_over_results_carrier",
+        "test_hk_interim_not_annual",
+        "test_hk_simplified_risk_title"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B12",
+      "title": "港股满页查询日期拆分不完整",
+      "impact": "两日区间不能拆分，单日截断静默",
+      "fix": "互不重叠的闭区间拆分，单日溢出明确缺口",
+      "files": "app/data/hkexnews.py",
+      "tests": [
+        "test_hk_single_day_overflow_is_visible",
+        "test_hk_two_day_overflow_splits_disjoint_windows"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B13",
+      "title": "回复、判决、拟解除被视为风险解除",
+      "impact": "事件状态不当安心",
+      "fix": "限定正式解除/结案标题，排除计划、申请、未解除及部分解除",
+      "files": "app/engine/lifecycle.py",
+      "tests": [
+        "test_reply_does_not_resolve_inquiry",
+        "test_judgment_does_not_resolve_lawsuit_obligation",
+        "test_hypothetical_release_title_not_resolved"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B14",
+      "title": "无依据模型解除及旧解除清除新事件",
+      "impact": "复发风险被掩盖",
+      "fix": "解除需依据、日期且晚于最新事件；无依据模型声明回到未知",
+      "files": "app/engine/lifecycle.py",
+      "tests": [
+        "test_model_claim_without_resolution_basis_not_retained",
+        "test_recurrence_not_cleared_by_old_resolution"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B15",
+      "title": "预算耗尽时阻断零费用模型缓存",
+      "impact": "已付费有效结果不能复用",
+      "fix": "预算只约束新调用，后续有效缓存仍可读取",
+      "files": "app/llm/adapter.py",
+      "tests": [
+        "test_cached_batch_after_an_overbudget_miss_is_still_used",
+        "test_cached_batch_can_run_after_budget_is_spent"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B16",
+      "title": "模型用量缺失按零费用结算",
+      "impact": "连续请求可穿透预算",
+      "fix": "按请求估算上界预占，并提示实际费用待核实",
+      "files": "app/llm/adapter.py",
+      "tests": [
+        "test_missing_llm_usage_reserves_estimated_budget"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B17",
+      "title": "扫描器构造失败不释放运行槽",
+      "impact": "任务滞留并占并发容量",
+      "fix": "构造置于异常保护范围，始终更新失败状态并释放槽",
+      "files": "app/main.py",
+      "tests": [
+        "test_task_constructor_failure_cleans_running_slot"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B18",
+      "title": "完成状态但没有报告仍被复用；修复前旧报告可复用",
+      "impact": "用户拿不到报告或继续看到旧误判",
+      "fix": "复用需报告非空；规则和报告升级 1.3.1 使旧版不复用",
+      "files": "app/core/db.py; app/engine/rules/base.py; app/engine/pipeline.py",
+      "tests": [
+        "test_result_reuse_requires_a_saved_report",
+        "test_old_buggy_rule_version_is_not_reused"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B19",
+      "title": "候选或未复核结论被算作最高已确认风险",
+      "impact": "报告夸大证据支持强度",
+      "fix": "只纳入原始披露确认且绑定已复核证据的结论，正确处理低严重度",
+      "files": "app/engine/pipeline.py",
+      "tests": [
+        "test_unconfirmed_risk_not_labelled_highest_confirmed_risk"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B20",
+      "title": "覆盖率圆环分母重复计数",
+      "impact": "100% 覆盖显示为 50%",
+      "fix": "圆环使用已判断/适用数量，与文本一致",
+      "files": "app/report/charts.py",
+      "tests": [
+        "test_full_coverage_donut_is_100_percent",
+        "test_partial_coverage_donut_matches_fraction",
+        "test_zero_coverage_donut"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B21",
+      "title": "完成后覆盖缺口徽标不出现",
+      "impact": "进度页需刷新才能看缺口",
+      "fix": "预置隐藏节点，轮询完成后显示",
+      "files": "app/web/templates/scan.html",
+      "tests": [
+        "test_progress_page_can_display_newly_completed_coverage"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B22",
+      "title": "文件去重先删原文件再建链接",
+      "impact": "硬链接失败丢失下载原文",
+      "fix": "先建临时链接，再原子替换，失败保留原文件",
+      "files": "app/core/storage.py",
+      "tests": [
+        "test_dedup_link_failure_preserves_original"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B23",
+      "title": "清理器不识别真实解析临时文件",
+      "impact": "中断解析后临时文件泄漏",
+      "fix": "匹配带内容哈希和随机后缀的临时 JSON 文件",
+      "files": "app/core/download_cleanup.py",
+      "tests": [
+        "test_interrupted_parser_temp_file_is_cleaned"
+      ],
+      "status": "已修复"
+    },
+    {
+      "id": "B24",
+      "title": "回归夹具缺少报告和执行器 mock，默认测试入口缺少全局隔离",
+      "impact": "测试可能意外启动真实扫描并写默认运行目录",
+      "fix": "修正复用夹具，增加隔离存储、网络阻断和密钥清空的统一测试入口",
+      "files": "tests/test_hardening.py; scripts/test_offline.py",
+      "tests": [
+        "test_partial_result_cache_reused"
+      ],
+      "status": "已修复"
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "U1",
+      "priority": "优先",
+      "name": "附注表格量化与页码证据",
+      "gap": "现有深度项主要依赖关键词，不能系统量化账龄、坏账准备、商誉减值假设、开发支出资本化和客户集中度。",
+      "proposal": "优先 A 股年报：逐笔提取附注表格，保留单位/期间/页码，勾稽主表；图像页增加 OCR 并标可信度。",
+      "acceptance": "附注合计与主表核对；无法勾稽不生成确认结论；人工标注样本检验漏报/误报。",
+      "effort": "大",
+      "reason": "更直接识别利润与资产质量问题。"
+    },
+    {
+      "id": "U2",
+      "priority": "优先",
+      "name": "完整债务与未来 12 个月流动性",
+      "gap": "SV10 已覆盖部分短债；实际利息、完整到期表、供应链融资、契约、资金受限用途仍缺量化。",
+      "proposal": "补到期日和借款结构、实际付息、票据/债券/租赁、供应商融资及担保敞口；按可用现金与确定偿付义务列缺口。",
+      "acceptance": "债务结构和主表勾稽；受限资金不重复扣减；缺到期数据不假定零或自动滚动融资。",
+      "effort": "大",
+      "reason": "区分账面有现金与实际能偿债。"
+    },
+    {
+      "id": "U3",
+      "priority": "优先",
+      "name": "源数据交叉核验与新鲜度",
+      "gap": "有原始快照和口径核验，但结构化数据未全面与最新公告主表交叉勾稽。",
+      "proposal": "按证券/币种/合并口径比对 API 与报告主表；检查最新报告是否漏抓、重述和公告范围完整性。",
+      "acceptance": "差异写入底稿；过期/冲突数据显著提示；禁止来源冲突时自动判正常。",
+      "effort": "中到大",
+      "reason": "避免对错误或过时基础数据作精确判断。"
+    },
+    {
+      "id": "U4",
+      "priority": "次优先",
+      "name": "接通金融行业监管指标",
+      "gap": "BK03/BK04、IN03/IN04、BR03/BR04 仍是数据源暂不支持，或仅原文负面线索。",
+      "proposal": "按行业逐项接通不良/拨备/资本、偿付/准备金、净资本/流动性/信用敞口，保留监管口径版本。",
+      "acceptance": "取得真实字段才形成量化结论；准则或监管口径变更需记录；缺失继续明示。",
+      "effort": "大",
+      "reason": "提升金融股排雷实质覆盖。"
+    },
+    {
+      "id": "U5",
+      "priority": "次优先",
+      "name": "历史报告差分与重点公司观察",
+      "gap": "已有历史记录和事件生命周期，但没有完整的事实/风险变化对照和自动复查机制。",
+      "proposal": "对新增恶化、改善、解除及覆盖变化做对照；解除仍要求正式依据。用户选择观察名单及频率后才启用通知。",
+      "acceptance": "新增风险能追到新原文；不把覆盖增加当风险上升；无变化不通知。",
+      "effort": "中",
+      "reason": "降低反复阅读整份报告的成本。"
+    },
+    {
+      "id": "U6",
+      "priority": "次优先",
+      "name": "行业阈值校准与人工标注验收集",
+      "gap": "静态阈值有边界测试，但固定样本验收仍有待复核项，未给出经人工核实的误报/漏报表现。",
+      "proposal": "构建冻结时期、证券分层且来源完整的真实案例集；标注事件主体/重要性/当前状态；按行业调阈值。",
+      "acceptance": "隔离训练/验证样本；公布误报漏报及覆盖率；所有阈值改动可回放且有审核记录。",
+      "effort": "中到大",
+      "reason": "衡量排雷质量，避免只靠测试数量。"
+    },
+    {
+      "id": "U7",
+      "priority": "后续",
+      "name": "中断恢复与扫描运行治理",
+      "gap": "扫描超时与并发已有保护，但重启后的任务续跑尚未完整实现。",
+      "proposal": "阶段检查点、启动时清理过期运行态、支持从已保存原始资料重试，控制重复模型费用。",
+      "acceptance": "在抓取/解析/模型/报告阶段强制中断验证；任务不永久运行、不重复付费。",
+      "effort": "中",
+      "reason": "改善长扫描的稳定性。"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://www.ifrs.org/news-and-events/news/2023/05/iasb-increases-transparency-of-companies-supplier-finance/",
+      "usage": "支持供应商融资透明度与流动性披露的研究方向；升级建议是本次代码审查判断。"
+    },
+    {
+      "url": "https://www.hkex.com.hk/News/Regulatory-Announcements/2024/240126news?sc_lang=en",
+      "usage": "支持财务报告、资产减值与控制等重点核验方向。"
+    }
+  ],
+  "limitations": [
+    "代码审查及离线回归不能证明没有其他缺陷。",
+    "Web 验收使用合成财务和公告，全流程真实执行但关闭模型与外部数据请求；未重新完成真实公司全年公告及付费模型端到端扫描。",
+    "未重启原有 8770 服务；运行中的进程需要重启后加载代码。",
+    "没有实施上述 U1–U7 新功能，也没有创建定时观察任务。"
+  ],
+  "incident": "首次回归有旧夹具意外启动扫描。完整备份后移除本次任务 2eac56a1e56c 的孤立 facts741/documents94/evidence77/fetch_logs38/stage_timings5。无 task/report/llm_usage 行、无报告或记账模型费用。原始响应保留；source_health 聚合未回滚，因为缺少扫描前值，不伪造历史。测试入口现已全局隔离并阻断真实网络。Web 审核 v1 对 HTTP 头大小写处理错误，修正底稿脚本后 v2 十项全通过，v1 留存。"
+}

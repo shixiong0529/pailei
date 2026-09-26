@@ -24,7 +24,7 @@ from app.engine.metrics import MetricsBundle
 from app.engine.normalize import FactSet
 from app.data.pdftext import ParsedDoc
 
-RULE_VERSION = "1.3"
+RULE_VERSION = "1.3.1"
 
 
 @dataclass

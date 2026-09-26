@@ -21,17 +21,17 @@ from app.core.models import RiskEvent
 
 # 各事件类别的“解除/进展”关键词（用于在后续披露中寻找解除依据）。
 RESOLUTION_HINTS: dict[str, tuple[str, ...]] = {
-    "监管问询": ("回复", "回函", "答复", "回覆", "答覆"),
-    "监管处罚": ("整改", "结案", "結案"),
-    "监管调查": ("整改", "结案", "結案"),
-    "诉讼": ("和解", "结案", "撤诉", "判决", "結案", "撤訴", "判決"),
+    "监管问询": ("问询事项结案", "問詢事項結案"),
+    "监管处罚": ("结案", "結案"),
+    "监管调查": ("结案", "結案"),
+    "诉讼": ("结案", "撤诉", "結案", "撤訴"),
     "资产冻结": ("解除冻结", "解除司法冻结", "解除凍結", "解除司法凍結"),
     "股权质押": ("解除质押", "解除質押"),
     "质押冻结": ("解除质押", "解除冻结", "解除司法冻结", "解除質押", "解除凍結", "解除司法凍結"),
     "审计机构": ("聘任", "续聘", "改聘", "續聘"),
-    "盈利警告": ("年度报告", "业绩快报", "年度報告", "業績快報"),
+    "盈利警告": (),
     "上市地位": ("复牌", "復牌"),
-    "财务更正": ("更正",),
+    "财务更正": (),
 }
 
 # 需要历史追溯的重要事件类别（未解除时）。
@@ -89,7 +89,10 @@ def dedup_key(title: str) -> str:
 
 def _is_resolution_title(doc_title: str, category: str) -> bool:
     hints = RESOLUTION_HINTS.get(category, ())
-    return any(h in (doc_title or "") for h in hints)
+    title = doc_title or ""
+    if re.search(r"拟|擬|申请|申請|计划|計劃|可能|尚未|未能|未获|未獲|未解除|未结案|未結案|未撤诉|未撤訴|部分解除|部分撤诉|部分撤訴", title):
+        return False
+    return any(h in title for h in hints)
 
 
 def detect_resolution(event: RiskEvent, docs: list[Any]) -> tuple[bool, str, str]:
@@ -155,8 +158,10 @@ def enrich_events(events: list[RiskEvent], docs: list[Any]) -> list[RiskEvent]:
             ev.resolution_date = rdate
             ev.lifecycle_stage = "已解除"
         else:
-            # 已有未解除或无法判断的状态：仅当有后续披露但非解除时才标注进展。
-            ev.resolved = ev.resolved if ev.resolved is not None else None
+            # 模型的 resolved=true 不是正式解除依据；只保留仍可追溯的既有状态。
+            if ev.resolved is True and not (ev.resolution_basis and ev.resolution_date):
+                ev.resolved = None
+                ev.resolution_note = "尚未取得可关联的后续正式解除披露"
     return events
 
 
@@ -171,9 +176,12 @@ def build_lifecycles(events: list[RiskEvent]) -> list[dict[str, Any]]:
         group = sorted(group, key=lambda e: e.occurred_date)
         first = group[0]
         latest = group[-1]
-        resolved = any(e.resolved for e in group)
-        basis = next((e.resolution_basis for e in group if e.resolution_basis), "")
-        rdate = next((e.resolution_date for e in group if e.resolution_date), "")
+        resolutions = [e for e in group if e.resolved is True and e.resolution_basis
+                       and e.resolution_date and e.resolution_date > latest.occurred_date]
+        resolution = max(resolutions, key=lambda e: e.resolution_date) if resolutions else None
+        resolved = resolution is not None
+        basis = resolution.resolution_basis if resolution else ""
+        rdate = resolution.resolution_date if resolution else ""
         out.append(
             {
                 "key": key,

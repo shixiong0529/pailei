@@ -13,7 +13,7 @@ from app.core.models import FinancialFact, DisclosureDoc, Security, Market, Peri
 from app.data.pdftext import ParsedDoc
 from app.engine.normalize import FactSet
 from app.engine.metrics import compute_metrics
-from app.engine.rules.base import RuleContext, EvidenceStore
+from app.engine.rules.base import RuleContext, EvidenceStore, RULE_VERSION
 from app.engine.runner import build_registry, run_rules
 from app.report.render import render_inline, risk_signal_score
 root = ROOT
@@ -49,7 +49,7 @@ for tid in sys.argv[1:]:
     ctx = RuleContext(sec, sec.market, fs, compute_metrics(fs, market=sec.market), docs, parsed, EvidenceStore(), industry_pack=old['industry_pack'])
     start = time.perf_counter(); out = run_rules(ctx, build_registry()); elapsed = time.perf_counter()-start
     dims = [{'dimension': dim, 'results':[o.to_result().to_dict() for o in out.outcomes if o.rule.dimension.value==dim]} for dim in dict.fromkeys(o.rule.dimension.value for o in out.outcomes)]
-    new = dict(old);new.update(report_version='1.3', rule_version='1.3', scoring_version='2', dimensions=dims, task_id='replay-'+tid,
+    new = dict(old);new.update(report_version=RULE_VERSION, rule_version=RULE_VERSION, scoring_version='2', dimensions=dims, task_id='replay-'+tid,
                              rule_workpapers={o.rule.rule_id:o.workpaper for o in out.outcomes}, evidence={eid:e.to_dict() for eid,e in ctx.evidence.items.items()})
     new['summary'] = dict(old['summary'], coverage=out.coverage.to_dict(), risk_count=len(out.risks()), watch_count=len(out.watches()), insufficient_count=len(out.insufficient()))
     new['notes'] = ['验证用历史资料离线重放：未重新获取公告，不是截至今日的投资判断；使用旧版缓存的已解析页段；历史 API 原始响应缺失时不能补造。']

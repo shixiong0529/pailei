@@ -28,7 +28,7 @@ from app.llm import cache
 # 提示词版本：改动任何业务提示词（system/user 文案、字段要求）时递增，使旧缓存失效。
 PROMPT_VERSION = "2"
 # 校验版本：改动返回结构的校验规则时递增，使旧缓存失效。
-VALIDATION_VERSION = "1"
+VALIDATION_VERSION = "2"
 
 
 @dataclass
@@ -250,7 +250,11 @@ class LLMAdapter:
             self._add_failure(msg)
             return LLMResult(ok=False, error=msg)
 
+        usage_missing = (not isinstance(usage, dict) or
+                         any(k not in usage for k in ("prompt_tokens", "completion_tokens")))
         try:
+            if usage_missing:
+                usage = {}
             tin = max(0, int(usage.get("prompt_tokens") or 0))
             tout = max(0, int(usage.get("completion_tokens") or 0))
         except (ValueError, TypeError, AttributeError):
@@ -261,6 +265,9 @@ class LLMAdapter:
             tin / 1_000_000 * self.config.price_in_cny_per_1m
             + tout / 1_000_000 * self.config.price_out_cny_per_1m
         )
+        if usage_missing:
+            cost = estimated
+            self._add_failure("模型未返回完整用量，费用按请求上界估算预占，实际费用待核实")
         settle(cost, count_call=True)
         if self.task_id:
             save_llm_usage(self.task_id, step or "chat", self.config.model, tin, tout, cost)
@@ -326,15 +333,23 @@ class LLMAdapter:
         while pending and not stop:
             with self._state_lock:
                 projected_cost = self.spent_cny + self._reserved_cny
-            wave: list[tuple[list[Any], str, str, float]] = []
+            wave = []
             for job in pending[:workers]:
-                if self.config.budget_cny > 0 and projected_cost + job[3] > self.config.budget_cny:
+                key = cache.compute_cache_key(self.config, job[1], job[2], step=step,
+                    max_tokens=max_tokens, prompt_version=PROMPT_VERSION,
+                    validation_version=VALIDATION_VERSION)
+                stored = cache.get(key)
+                cached = (stored is not None and stored.get('validation_version') == VALIDATION_VERSION
+                          and isinstance(stored.get('data'), list))
+                estimated_cost = 0.0 if cached else job[3]
+                if self.config.budget_cny > 0 and projected_cost + estimated_cost > self.config.budget_cny and not cached:
                     break
-                projected_cost += job[3]
+                projected_cost += estimated_cost
                 wave.append(job)
             if not wave:
                 failures.append(f"已达到本次扫描的模型预算上限 {self.config.budget_cny:.2f} 元")
-                break
+                del pending[0]
+                continue  # 后续批次仍可能命中无需费用的缓存
 
             if len(wave) == 1:
                 results = [invoke(wave[0])]
@@ -350,7 +365,8 @@ class LLMAdapter:
                 total_cost += r.cost_cny
                 if r.skipped_reason:
                     failures.append(r.skipped_reason)
-                    stop = True
+                    if '预算' not in r.skipped_reason:
+                        stop = True
                 if r.ok and isinstance(r.data, list):
                     merged.extend(r.data)
                 elif r.error:

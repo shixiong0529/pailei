@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from pathlib import Path
 
 from app.config import settings
@@ -33,12 +34,16 @@ def dedup(path: Path, sha256: str) -> Path:
     blob = blob_path(sha256)
     try:
         if blob.exists():
+            temp_link = path.with_name(f'.{path.name}.{uuid.uuid4().hex}.tmp')
             try:
                 if path.resolve() != blob.resolve():
-                    path.unlink(missing_ok=True)
-                    os.link(blob, path)
+                    # 先建新链接再原子替换，文件系统不支持硬链接时保留原文。
+                    os.link(blob, temp_link)
+                    os.replace(temp_link, path)
             except OSError:
-                pass
+                return path
+            finally:
+                temp_link.unlink(missing_ok=True)
             return blob
         blob.parent.mkdir(parents=True, exist_ok=True)
         try:

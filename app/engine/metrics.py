@@ -179,13 +179,19 @@ def compute_metrics(
 
     deducted = cur("net_profit_deducted")
     put("net_profit_deducted", "扣非净利润", deducted, unit="元", formula="扣非净利润")
+    attributable_fact = facts.get("net_profit_attributable", latest)
+    deducted_fact = facts.get("net_profit_deducted", latest)
+    comparable_profit = bool(attributable_fact and deducted_fact and
+        (attributable_fact.currency, attributable_fact.unit, attributable_fact.period_type, attributable_fact.period_start)
+        == (deducted_fact.currency, deducted_fact.unit, deducted_fact.period_type, deducted_fact.period_start))
     put(
         "nonrecurring_ratio", "非经常性损益占净利润比",
         safe_div(
-            (net_profit - deducted) if (net_profit is not None and deducted is not None) else None,
-            net_profit,
+            (cur("net_profit_attributable") - deducted)
+            if comparable_profit and cur("net_profit_attributable") is not None and deducted is not None else None,
+            cur("net_profit_attributable"),
         ),
-        formula="(净利润 - 扣非净利润) / 净利润",
+        formula="(归母净利润 - 归母扣非净利润) / 归母净利润",
     )
 
     gross = cur("gross_profit")
@@ -232,9 +238,14 @@ def compute_metrics(
     put("total_interest_bearing_debt", "有息负债（短借+长借）", total_debt, unit="元")
     # 受限资金不计入可自由偿债现金（方案 §5）
     cash_equivalents = cur("cash_equivalents")
-    usable_cash = cash_equivalents if cash_equivalents is not None else (
+    usable_cash = cash_equivalents if cash_equivalents is not None and cash_equivalents >= 0 else (
         cash - restricted if cash is not None and restricted is not None and cash >= restricted else None
     )
+    if ((cash_equivalents is not None and cash_equivalents < 0)
+            or (cash is not None and cash < 0) or (restricted is not None and restricted < 0)
+            or (cash is not None and restricted is not None and cash < restricted)):
+        usable_cash = None
+        bundle.notes.append("现金口径校验失败：现金金额为负或货币资金小于受限资金，未计算可用现金与偿债覆盖率")
     put("usable_cash", "可自由使用现金（扣除受限）", usable_cash, unit="元",
         formula="货币资金 - 受限存款及现金")
     put("cash_to_short_debt", "现金 / 短期借款", safe_div(usable_cash, st_debt),
@@ -299,7 +310,8 @@ def compute_metrics(
         )
 
     # ---------------- 来自主要指标的补充 ----------------
-    for key, label in (("roe_avg", "ROE"), ("roa", "ROA"), ("ar_days", "应收账款周转天数"),
+    for key, label in (("roe_avg", "ROE"), ("roe_weighted", "加权 ROE"),
+                       ("bank_loan_deposit_ratio", "存贷比"), ("roa", "ROA"), ("ar_days", "应收账款周转天数"),
                        ("inventory_days", "存货周转天数")):
         point = facts.get(key, latest)
         if point:

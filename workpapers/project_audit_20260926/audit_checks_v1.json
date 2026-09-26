@@ -1,0 +1,24 @@
+{
+  "generated_at": "2026-09-26T11:46:00+08:00",
+  "checks": {
+    "test_exit_zero": true,
+    "387_tests": true,
+    "test_success": true,
+    "python_compile": true,
+    "diff_check": true,
+    "all_finding_tests_exist": true,
+    "web_acceptance": true,
+    "source_unchanged_during_verification": true
+  },
+  "passed": true,
+  "test_count": 387,
+  "compiled_files": 64,
+  "defect_groups": 24,
+  "raw_log": "data/raw/project_audit_20260926/final_v1.log",
+  "source_manifest": "data/source_manifest/project_audit_20260926_v1.json",
+  "web_checks": "web_checks_v2.json",
+  "exceptions": [
+    "首次回归有旧夹具意外启动扫描。完整备份后移除本次任务 2eac56a1e56c 的孤立 facts741/documents94/evidence77/fetch_logs38/stage_timings5。无 task/report/llm_usage 行、无报告或记账模型费用。原始响应保留；source_health 聚合未回滚，因为缺少扫描前值，不伪造历史。测试入口现已全局隔离并阻断真实网络。Web 审核 v1 对 HTTP 头大小写处理错误，修正底稿脚本后 v2 十项全通过，v1 留存。"
+  ],
+  "raw_versions": "保留所有 before/regression/isolated 与 Web v1/v2 记录，不覆盖旧 Raw。"
+}

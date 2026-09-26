@@ -285,8 +285,9 @@ def health():
 
 
 def _run_task(task_id: str, query: str) -> None:
-    pipeline = ScanPipeline(task_id=task_id)
+    pipeline = None
     try:
+        pipeline = ScanPipeline(task_id=task_id)
         pipeline.run(query)
     except Exception as exc:  # 兜底，确保任务状态一定被更新
         db.update_task(
@@ -298,7 +299,8 @@ def _run_task(task_id: str, query: str) -> None:
     finally:
         with _lock:
             _running.pop(task_id, None)
-        pipeline.close()
+        if pipeline is not None:
+            pipeline.close()
 
 
 def create_app() -> FastAPI:

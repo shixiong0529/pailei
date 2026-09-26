@@ -4,7 +4,7 @@
 <div class="card">
   <h2>
     <span id="status-badge" class="badge {{ status_label(task.status) }}">{{ status_label(task.status) }}</span>
-    {% if task.coverage_level and task_done(task.status) %}<span id="cov-badge" class="badge cov">{{ task.coverage_level }}</span>{% endif %}
+    <span id="cov-badge" class="badge cov"{% if not task.coverage_level or not task_done(task.status) %} style="display:none"{% endif %}>{{ task.coverage_level or '' }}</span>
     <span style="margin-left:8px">{{ task.query }}</span>
     <span class="mono" style="margin-left:8px">{{ task.secucode or '' }}</span>
   </h2>
@@ -49,7 +49,7 @@ async function poll(){
     document.getElementById('status-badge').textContent = r.status;
     document.getElementById('status-badge').className = 'badge ' + r.status;
     const cov = document.getElementById('cov-badge');
-    if (cov) { cov.textContent = r.coverage_level || ''; cov.style.display = r.coverage_level ? '' : 'none'; }
+    if (cov) { cov.textContent = r.coverage_level || ''; cov.style.display = r.done && r.coverage_level ? '' : 'none'; }
     document.getElementById('facts').textContent = r.facts;
     document.getElementById('docs').textContent = r.documents;
     if (r.elapsed_ms) document.getElementById('elapsed').textContent = (r.elapsed_ms/1000).toFixed(1) + 's';

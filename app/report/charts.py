@@ -142,8 +142,8 @@ def trend_chart(
 
 def coverage_donut(applicable: int, evaluated: int, insufficient: int) -> str:
     """覆盖度环形图。"""
-    total = max(applicable + evaluated, 1)
-    done = min(evaluated, total)
+    total = max(applicable, 0)
+    done = min(max(evaluated, 0), total)
     radius, cx, cy, stroke = 52, 80, 80, 20
     circumference = 2 * 3.14159265 * radius
     filled = circumference * (done / total) if total else 0

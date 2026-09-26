@@ -92,7 +92,8 @@ def _candidates(days):
     cache_root = settings.cache_dir/'pdf_parse'
     for path in _files(cache_root):
         # Includes successful parser JSON and interrupted atomic-write temp files.
-        if path.suffix != '.json' and not path.name.startswith('tmp'):
+        parser_temp = bool(re.fullmatch(r'[a-fA-F0-9]{64}\.\d+\.\d+\.\d+\.json\..+\.tmp', path.name))
+        if path.suffix != '.json' and not path.name.startswith('tmp') and not parser_temp:
             continue
         st = path.stat()
         if (datetime.fromtimestamp(st.st_mtime).astimezone().date().isoformat() in days

@@ -326,6 +326,7 @@ def find_recent_task(query: str, within_minutes: int = 60, rule_version: str | N
     with connect() as conn:
         row = conn.execute(
             "SELECT * FROM scan_tasks WHERE query=? AND status IN ('生成成功','超时') "
+            "AND EXISTS (SELECT 1 FROM reports WHERE reports.task_id=scan_tasks.task_id AND reports.payload IS NOT NULL) "
             "AND (? IS NULL OR rule_version=?) ORDER BY created_at DESC LIMIT 1",
             (query, rule_version, rule_version),
         ).fetchone()
@@ -337,7 +338,7 @@ def find_recent_task(query: str, within_minutes: int = 60, rule_version: str | N
         age = (datetime.now() - datetime.fromisoformat(created)).total_seconds() / 60
     except ValueError:
         return None
-    return task if age <= within_minutes else None
+    return task if 0 <= age <= within_minutes else None
 
 
 # ------------------------------------------------------------------- 明细写入

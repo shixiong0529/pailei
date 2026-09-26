@@ -326,9 +326,12 @@ class HardeningTests(unittest.TestCase):
             with main._lock:main._running.clear();main._running.update(original)
 
     def test_partial_result_cache_reused(self):
-        from app.main import app
+        from app import main
         db.create_task('partial','600519');db.update_task('partial',status=TaskStatus.SUCCEEDED.value,coverage_level='一般缺口',rule_version=RULE_VERSION)
-        with TestClient(app) as c:r=c.post('/api/scan',json={'query':'600519'}).json()
+        db.save_report('partial', '', '', {'task_id':'partial','rule_version':RULE_VERSION})
+        with patch.object(main.executor, 'submit') as submit, TestClient(main.app) as c:
+            r=c.post('/api/scan',json={'query':'600519'}).json()
+        submit.assert_not_called()
         self.assertEqual(r['task_id'],'partial');self.assertTrue(r['reused'])
 
     def test_slow_dns_wait_is_bounded(self):

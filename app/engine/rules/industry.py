@@ -229,6 +229,9 @@ def _re02(ctx: RuleContext):
     cash = ctx.metrics.get("cash")
     restricted = ctx.metrics.get("restricted_cash")
     st = ctx.metrics.get("short_term_borrowings")
+    if st == 0:
+        return (RuleStatus.NOT_APPLICABLE, Severity.UNKNOWN, "已披露短期借款为零",
+                "不计算零分母覆盖率；完整到期债务另由 SV10 检查")
     if cash is None or st is None or not st:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN,
                 f"货币资金 {fmoney(cash)}，短期借款 {fmoney(st)}", "")

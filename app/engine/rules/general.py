@@ -171,6 +171,9 @@ def _r_fq06(ctx: RuleContext):
     finding = (
         f"非经常性损益占净利润 {fnum(ratio)}；净利润 {fmoney(np_)}，扣非净利润 {fmoney(deducted)}"
     )
+    if np_ is not None and np_ <= 0:
+        return (RuleStatus.NOT_APPLICABLE, Severity.UNKNOWN, finding,
+                "净利润非正，不使用非经常性损益占盈利比例判断利润来源；亏损及扣非亏损另见 FQ08、FQ07")
     if ratio is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, finding, "")
     if ratio > 0.50:
@@ -192,7 +195,7 @@ def _r_fq07(ctx: RuleContext):
     finding = f"扣非净利润 {fmoney(deducted)}，净利润 {fmoney(np_)}"
     if deducted is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, finding, "")
-    if deducted < 0 <= (np_ or 0):
+    if deducted < 0 and np_ is not None and np_ >= 0:
         return (
             RuleStatus.RISK, Severity.HIGH, finding,
             "扣非后亏损而报表盈利，主业实际处于亏损状态，靠非经常性项目扭亏",
@@ -309,6 +312,9 @@ def _r_sv01(ctx: RuleContext):
     cash = ctx.metrics.get("usable_cash")
     st = ctx.metrics.get("short_term_borrowings")
     finding = f"（货币资金 - 受限资金）/ 短期借款 = {fnum(ratio, '倍')}；可用现金 {fmoney(cash)}，短期借款 {fmoney(st)}"
+    if st == 0:
+        return (RuleStatus.NOT_APPLICABLE, Severity.UNKNOWN, finding,
+                "已披露短期借款为零，不计算零分母覆盖率；完整到期债务另由 SV10 检查")
     if ratio is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, finding, "")
     if ratio < 1:
@@ -354,10 +360,10 @@ def _r_sv04(ctx: RuleContext):
     # 财务费用为负意味着利息净收入而非净支出，此时该倍数没有经济含义
     if fin_value is not None and fin_value <= 0:
         return (
-            RuleStatus.NORMAL, Severity.LOW,
-            f"财务费用为 {fmoney(fin_value)}（为负，即利息净收入大于利息支出），"
+            RuleStatus.NOT_APPLICABLE, Severity.UNKNOWN,
+            f"财务费用为 {fmoney(fin_value)}（非正），"
             f"利息保障倍数不适用；营业利润 {fmoney(op_profit)}",
-            "公司处于净利息收入状态，付息压力不是当前矛盾，本项不适用普通企业的利息保障判定",
+            "净财务费用非正不能排除实际利息支出；需核实利息支出明细，本项不套用净费用保障倍数",
         )
     if ratio is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, finding, "")
@@ -801,6 +807,12 @@ def _r_op04(ctx: RuleContext):
 
 def _r_op05(ctx: RuleContext):
     """持续经营：综合审计原文与现金流、盈利双重信号判断。"""
+    ocf = ctx.metrics.get("ocf")
+    np_ = ctx.metrics.get("net_profit")
+    equity = ctx.metrics.get("total_equity")
+    finding = f"经营现金流 {fmoney(ocf)}，净利润 {fmoney(np_)}，所有者权益 {fmoney(equity)}"
+    if equity is not None and equity < 0:
+        return (RuleStatus.RISK, Severity.HIGH, finding, "所有者权益为负，已出现资不抵债")
     # 审计报告中的持续经营重大不确定性是比单期现金流更直接的正式信号。
     # OP02 已将其作为高风险审计意见展示；这里至少标为关注，避免同一报告一边确认
     # 重大不确定性、一边声称持续经营“未发现明显异常”。
@@ -825,10 +837,7 @@ def _r_op05(ctx: RuleContext):
                 "正式审计披露已提示持续经营重大不确定性，即使单期经营现金流为正，也不能表述为未发现持续经营异常",
             )
 
-    ocf = ctx.metrics.get("ocf")
-    np_ = ctx.metrics.get("net_profit")
-    equity = ctx.metrics.get("total_equity")
-    if ocf is None and np_ is None:
+    if ocf is None or np_ is None:
         return (RuleStatus.INSUFFICIENT, Severity.UNKNOWN, "缺少现金流与利润数据，无法判断", "")
     both_negative = (ocf is not None and ocf < 0) and (np_ is not None and np_ < 0)
     finding = f"经营现金流 {fmoney(ocf)}，净利润 {fmoney(np_)}，所有者权益 {fmoney(equity)}"
@@ -837,8 +846,6 @@ def _r_op05(ctx: RuleContext):
             RuleStatus.RISK, Severity.HIGH, finding,
             "经营现金流与净利润同时为负，持续经营能力依赖外部支持，需核实融资安排与在手现金",
         )
-    if equity is not None and equity < 0:
-        return (RuleStatus.RISK, Severity.HIGH, finding, "所有者权益为负，已出现资不抵债")
     return (RuleStatus.NORMAL, Severity.LOW, finding, "未发现持续经营的双重负面信号")
 
 
@@ -873,13 +880,13 @@ def build_general_rules() -> list[Rule]:
         Rule("FQ12", "财务重述或追溯调整", Dimension.FINANCIAL_QUALITY,
              "是否存在更正类公告", packs=PACK, check=_r_fq12),
         Rule("SV01", "现金无法覆盖短期借款", Dimension.SOLVENCY,
-             "可用现金对短债覆盖", requires=["metric:cash_to_short_debt"], packs=PACK, exclude_packs=FINANCIAL_PACKS, check=_r_sv01),
+             "可用现金对短债覆盖", requires=["metric:short_term_borrowings"], packs=PACK, exclude_packs=FINANCIAL_PACKS, check=_r_sv01),
         Rule("SV02", "资产负债率过高", Dimension.SOLVENCY,
              "杠杆水平", requires=["metric:debt_ratio"], packs=PACK, exclude_packs=FINANCIAL_PACKS + ["realestate"], check=_r_sv02),
         Rule("SV03", "流动比率过低", Dimension.SOLVENCY,
              "短期流动性", requires=["metric:current_ratio"], packs=PACK, exclude_packs=FINANCIAL_PACKS, check=_r_sv03),
         Rule("SV04", "利息保障倍数不足", Dimension.SOLVENCY,
-             "付息能力", requires=["metric:interest_coverage"], packs=PACK, exclude_packs=FINANCIAL_PACKS, check=_r_sv04),
+             "付息能力", packs=PACK, exclude_packs=FINANCIAL_PACKS, check=_r_sv04),
         Rule("SV05", "有息负债占比偏高", Dimension.SOLVENCY,
              "有息负债/总资产", requires=["metric:debt_to_assets_ex_cash"], packs=PACK, exclude_packs=FINANCIAL_PACKS, check=_r_sv05),
         Rule("SV06", "经营现金流无法覆盖资本开支", Dimension.SOLVENCY,
@@ -919,6 +926,6 @@ def build_general_rules() -> list[Rule]:
         Rule("OP04", "商誉减值风险", Dimension.OPERATION,
              "商誉占比", packs=PACK, check=_r_op04),
         Rule("OP05", "持续经营能力", Dimension.OPERATION,
-             "现金流与盈利双重信号", requires=["metric:ocf", "metric:net_profit"],
+             "现金流与盈利双重信号，或负权益及审计原文信号",
              packs=PACK, check=_r_op05),
     ]

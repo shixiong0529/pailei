@@ -10,6 +10,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
+import math
 from typing import Iterable, Optional
 
 from app.core.models import FinancialFact, PeriodType, Statement
@@ -46,7 +48,12 @@ class FactSet:
 
     def _index_fact(self, f: FinancialFact) -> None:
         # 原始列表完整保留母公司/合并及重述版本；计算只用合并报表，选最新公告。
-        if f.std_item == "__error__" or f.value is None or not f.period_end or not f.consolidated:
+        if f.std_item == "__error__" or f.value is None or not f.period_end or not f.consolidated or not f.verified:
+            return
+        try:
+            if not math.isfinite(f.value) or date.fromisoformat(f.period_end).isoformat() != f.period_end:
+                return
+        except (TypeError, ValueError):
             return
         key = (f.std_item, f.period_end)
         previous = self._index.get(key)
@@ -80,11 +87,23 @@ class FactSet:
         self, std_item: str, period_type: PeriodType | None = None, limit: int = 8
     ) -> list[Point]:
         """取某科目的时间序列，默认只返回同一期次口径（保证可比）。"""
+        candidates = [f for f in self._index.values() if f.std_item == std_item
+                      and (period_type is None or f.period_type is period_type)]
+        if not candidates:
+            return []
+        anchor = max(candidates, key=lambda f: f.period_end)
+        if anchor.unit == "元" and anchor.currency in {"", "未核实", "UNKNOWN"}:
+            return []
+        period_type = period_type or anchor.period_type
         points: list[Point] = []
         for f in self._index.values():
             if f.std_item != std_item or f.value is None or not f.period_end:
                 continue
             if period_type and f.period_type is not period_type:
+                continue
+            if (f.currency, f.unit) != (anchor.currency, anchor.unit):
+                continue
+            if f.period_start and anchor.period_start and f.period_start[4:] != anchor.period_start[4:]:
                 continue
             points.append(
                 Point(
@@ -129,7 +148,20 @@ class FactSet:
         return sorted({f.statement.value for f in self.facts if f.std_item != "__error__"})
 
     def errors(self) -> list[str]:
-        return [f.note for f in self.facts if f.std_item == "__error__"]
+        errors = [f.note for f in self.facts if f.std_item == "__error__"]
+        invalid = []
+        for f in self.facts:
+            if f.std_item == "__error__" or f.value is None or not f.consolidated:
+                continue
+            try:
+                valid = math.isfinite(f.value) and date.fromisoformat(f.period_end).isoformat() == f.period_end
+            except (TypeError, ValueError):
+                valid = False
+            if not valid or not f.verified:
+                invalid.append(f"{f.std_item}@{f.period_end}")
+        if invalid:
+            errors.append(f"{len(invalid)} 条财务事实未通过数值、日期或核实状态检查，已排除计算；示例：" + "、".join(invalid[:8]))
+        return errors
 
     def coverage_note(self) -> dict[str, object]:
         return {
@@ -164,12 +196,15 @@ def growth(current: Optional[float], previous: Optional[float]) -> Optional[floa
     """同比增长率。基数为负或接近零时不套用普通同比解释，返回 None。"""
     if current is None or previous is None:
         return None
+    if not math.isfinite(current) or not math.isfinite(previous):
+        return None
     if abs(previous) < 1e-6:
         return None
     if previous < 0 or current < 0:
         # 负利润基数下的同比无经济含义，交由调用方另行说明
         return None
-    return (current - previous) / abs(previous)
+    result = (current - previous) / abs(previous)
+    return result if math.isfinite(result) else None
 
 
 def pct(value: Optional[float], digits: int = 2) -> str:
